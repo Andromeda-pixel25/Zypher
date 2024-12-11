@@ -1,6 +1,9 @@
 import streamlit as st
 import replicate
 import os
+import sounddevice as sd
+import numpy as np
+from scipy.io.wavfile import write
 import speech_recognition as sr
 import tempfile
 
@@ -81,37 +84,38 @@ st.markdown("### Voice Input")
 if st.button("Start Recording"):
     st.info("Recording audio... Speak now!")
 
-    # Initialize recognizer
-    recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        try:
-            audio_data = recognizer.listen(source, timeout=10)
-            st.success("Recording complete. Processing...")
-            
-            # Save audio to a temporary file
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio_file:
-                temp_audio_file.write(audio_data.get_wav_data())
-                temp_audio_path = temp_audio_file.name
-            
-            # Convert speech to text
-            with st.spinner("Converting speech to text..."):
-                transcript = recognizer.recognize_google(audio_data)
-                st.success(f"Transcription: {transcript}")
+    # Record audio
+    duration = 10  # seconds
+    sample_rate = 16000  # Hz
+    try:
+        st.info("Recording for 10 seconds...")
+        audio_data = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype='int16')
+        sd.wait()  # Wait until recording is finished
+        st.success("Recording complete!")
 
-                # Add transcript to chat history
-                st.session_state.messages.append({"role": "user", "content": transcript})
-                with st.chat_message("user"):
-                    st.write(transcript)
+        # Save audio to a temporary file
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio_file:
+            write(temp_audio_file.name, sample_rate, audio_data)
+            temp_audio_path = temp_audio_file.name
 
-                # Generate response
-                with st.chat_message("assistant"):
-                    st.spinner("Generating response...")
-                    response = generate_llama2_response(transcript)
-                    st.write("".join(response))
-                    st.session_state.messages.append({"role": "assistant", "content": "".join(response)})
-        except sr.UnknownValueError:
-            st.error("Sorry, could not understand the audio.")
-        except sr.RequestError as e:
-            st.error(f"Could not request results; {e}")
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
+        # Transcribe the audio
+        st.info("Converting speech to text...")
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(temp_audio_path) as source:
+            audio = recognizer.record(source)
+            transcript = recognizer.recognize_google(audio)
+            st.success(f"Transcription: {transcript}")
+
+            # Add transcript to chat history
+            st.session_state.messages.append({"role": "user", "content": transcript})
+            with st.chat_message("user"):
+                st.write(transcript)
+
+            # Generate response
+            with st.chat_message("assistant"):
+                st.spinner("Generating response...")
+                response = generate_llama2_response(transcript)
+                st.write("".join(response))
+                st.session_state.messages.append({"role": "assistant", "content": "".join(response)})
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
