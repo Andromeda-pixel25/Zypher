@@ -80,6 +80,7 @@ if st.session_state.messages[-1]["role"] != "assistant":
     st.session_state.messages.append(message)
 
 # Voice Input Section
+sd.default.device = 1 
 st.markdown("### Voice Input")
 if st.button("Start Recording"):
     st.info("Recording audio... Speak now!")
