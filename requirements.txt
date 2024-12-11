@@ -3,4 +3,5 @@ replicate
 SpeechRecognition
 streamlit_mic_recorder
 audio_recorder_streamlit
-
+sounddevice
+scipy 
