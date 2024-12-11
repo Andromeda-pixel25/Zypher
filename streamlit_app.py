@@ -1,9 +1,8 @@
 import streamlit as st
 import replicate
 import os
-import tempfile
 import speech_recognition as sr
-from streamlit_mic_recorder import mic_recorder
+import tempfile
 
 # App title
 st.set_page_config(page_title="Zypher Chatbot")
@@ -47,20 +46,17 @@ def clear_chat_history():
     st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
 st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
 
-# Function for generating LLaMA2 response. Refactored from https://github.com/a16z-infra/llama2-chatbot
+# Function for generating LLaMA2 response
 def generate_llama2_response(prompt_input):
-    string_dialogue = "You are a helpful assistant."
+    string_dialogue = "You are a helpful assistant. You only respond as 'Assistant'."
     for dict_message in st.session_state.messages:
-        if dict_message["role"] == "user":
-            string_dialogue += "User: " + dict_message["content"] + "\n\n"
-        else:
-            string_dialogue += "Assistant: " + dict_message["content"] + "\n\n"
+        string_dialogue += dict_message["content"] + "\n\n"
     output = replicate.run(llm, 
                            input={"prompt": f"{string_dialogue} {prompt_input} Assistant: ",
                                   "temperature": temperature, "top_p": top_p, "max_length": max_length, "repetition_penalty": 1})
     return output
 
-# Handle text input
+# User-provided prompt
 if prompt := st.chat_input(disabled=not replicate_api):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -80,43 +76,42 @@ if st.session_state.messages[-1]["role"] != "assistant":
     message = {"role": "assistant", "content": full_response}
     st.session_state.messages.append(message)
 
-# Handle voice input
-st.markdown("---")
-voice_input = st.button("Record Voice Input")
-if voice_input:
-    with st.spinner("Recording..."):
-        mic_audio = mic_recorder()
-        if mic_audio:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
-                temp_audio.write(mic_audio)
-                temp_audio_path = temp_audio.name
+# Voice Input Section
+st.markdown("### Voice Input")
+if st.button("Start Recording"):
+    st.info("Recording audio... Speak now!")
 
-            # Speech recognition
-            recognizer = sr.Recognizer()
-            with sr.AudioFile(temp_audio_path) as source:
-                audio_data = recognizer.record(source)
-            try:
+    # Initialize recognizer
+    recognizer = sr.Recognizer()
+    with sr.Microphone() as source:
+        try:
+            audio_data = recognizer.listen(source, timeout=10)
+            st.success("Recording complete. Processing...")
+            
+            # Save audio to a temporary file
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio_file:
+                temp_audio_file.write(audio_data.get_wav_data())
+                temp_audio_path = temp_audio_file.name
+            
+            # Convert speech to text
+            with st.spinner("Converting speech to text..."):
                 transcript = recognizer.recognize_google(audio_data)
-                st.write("Transcribed Text:", transcript)
+                st.success(f"Transcription: {transcript}")
+
+                # Add transcript to chat history
                 st.session_state.messages.append({"role": "user", "content": transcript})
+                with st.chat_message("user"):
+                    st.write(transcript)
 
-                # Generate response for voice input
-                if transcript:
-                    with st.chat_message("assistant"):
-                        with st.spinner("Thinking..."):
-                            response = generate_llama2_response(transcript)
-                            placeholder = st.empty()
-                            full_response = ''
-                            for item in response:
-                                full_response += item
-                                placeholder.markdown(full_response)
-                            placeholder.markdown(full_response)
-                    message = {"role": "assistant", "content": full_response}
-                    st.session_state.messages.append(message)
-
-            except sr.UnknownValueError:
-                st.error("Could not understand the audio. Please try again.")
-            except sr.RequestError as e:
-                st.error(f"Speech recognition error: {e}")
-            finally:
-                os.remove(temp_audio_path)
+                # Generate response
+                with st.chat_message("assistant"):
+                    st.spinner("Generating response...")
+                    response = generate_llama2_response(transcript)
+                    st.write("".join(response))
+                    st.session_state.messages.append({"role": "assistant", "content": "".join(response)})
+        except sr.UnknownValueError:
+            st.error("Sorry, could not understand the audio.")
+        except sr.RequestError as e:
+            st.error(f"Could not request results; {e}")
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
