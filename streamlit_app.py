@@ -1,6 +1,8 @@
 import streamlit as st
 import replicate
 import os
+import speech_recognition as sr
+from streamlit_mic_recorder import mic_recorder
 
 # App title
 st.set_page_config(page_title="Zypher Chatbot")
@@ -37,8 +39,8 @@ if "messages" not in st.session_state.keys():
 
 # Display or clear chat messages
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+    # Filter out the role and just show the content
+    st.write(message["content"])
 
 def clear_chat_history():
     st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
@@ -56,6 +58,25 @@ def generate_llama2_response(prompt_input):
                            input={"prompt": f"{string_dialogue} {prompt_input} Assistant: ",
                                   "temperature":temperature, "top_p":top_p, "max_length":max_length, "repetition_penalty":1})
     return output
+
+# Mic recorder button for voice input
+mic_audio = mic_recorder()
+
+if mic_audio:
+    # Use Speech Recognition to convert speech to text
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(mic_audio) as source:
+        audio = recognizer.record(source)
+        try:
+            # Recognize speech using Google Web Speech API
+            transcript = recognizer.recognize_google(audio)
+            st.session_state.messages.append({"role": "user", "content": transcript})
+            with st.chat_message("user"):
+                st.write(transcript)
+        except sr.UnknownValueError:
+            st.error("Could not understand the audio")
+        except sr.RequestError:
+            st.error("Could not request results from Google Speech Recognition service")
 
 # User-provided prompt
 if prompt := st.chat_input(disabled=not replicate_api):
