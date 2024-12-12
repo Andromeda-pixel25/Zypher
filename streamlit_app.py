@@ -1,4 +1,4 @@
-import streamlit as st 2
+import streamlit as st 
 import os
 import google.generativeai as genai
 import pyttsx3
