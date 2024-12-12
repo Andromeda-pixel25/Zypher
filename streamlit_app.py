@@ -47,44 +47,38 @@ st.markdown(
         display: flex;
         align-items: center;
         gap: 10px;
-        position: sticky;
+        position: fixed;
         bottom: 0;
+        left: 0;
+        width: 100%;
         background: #fff;
         padding: 10px;
-        border-radius: 10px;
-        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        border-top: 1px solid #ddd;
+        box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
     }
     .input-textbox {
         flex: 1;
-        height: 50px;
-        border-radius: 25px;
+        height: 40px;
+        border-radius: 20px;
         padding: 10px;
         border: 1px solid #ccc;
     }
-    .send-button, .mic-button, .image-button {
+    .send-button, .image-button {
         background-color: #007bff;
         color: white;
         border: none;
         border-radius: 50%;
         padding: 10px;
-        height: 50px;
-        width: 50px;
+        height: 40px;
+        width: 40px;
         font-size: 18px;
         display: flex;
         justify-content: center;
         align-items: center;
         cursor: pointer;
     }
-    .mic-button {
-        background-color: #28a745;
-    }
     .image-button {
         background-color: #ffc107;
-    }
-    .output-image {
-        max-width: 100%;
-        margin: 10px 0;
-        border-radius: 10px;
     }
     </style>
     """,
@@ -101,7 +95,9 @@ st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
 
 # Session State for Messages
 if "messages" not in st.session_state:
-    st.session_state["messages"] = [{"role": "assistant", "content": "Hello! How can I assist you today?"}]
+    st.session_state["messages"] = [
+        {"role": "assistant", "content": "Hello! How can I assist you today?"}
+    ]
 
 # Display Messages
 st.markdown("<div class='messages-container'>", unsafe_allow_html=True)
@@ -114,72 +110,26 @@ for message in st.session_state["messages"]:
         st.image(message["content"], use_column_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# Input Row (Custom HTML/JS)
-st.markdown(
-    """
-    <div class='input-row'>
-        <input id='text-input' class='input-textbox' type='text' placeholder='Type a message...' />
-        <button id='send-button' class='send-button'>⮞</button>
-        <button id='mic-button' class='mic-button'>🎙️</button>
-        <button id='image-button' class='image-button'>🖼️</button>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-# JavaScript for Handling Input
-custom_js = """
-<script>
-    const sendButton = document.getElementById('send-button');
-    const micButton = document.getElementById('mic-button');
-    const imageButton = document.getElementById('image-button');
-    const textInput = document.getElementById('text-input');
-
-    // Send Button Logic
-    sendButton.addEventListener('click', () => {
-        const message = textInput.value;
-        if (message) {
-            Streamlit.setComponentValue({"type": "text", "content": message});
-            textInput.value = '';  // Clear input after sending
-        }
-    });
-
-    // Enter Key to Send
-    textInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            sendButton.click();
-        }
-    });
-
-    // Image Generation Button Logic
-    imageButton.addEventListener('click', () => {
-        const message = textInput.value;
-        if (message) {
-            Streamlit.setComponentValue({"type": "image", "content": message});
-            textInput.value = '';  // Clear input after sending
-        }
-    });
-</script>
-"""
-html(custom_js, height=0)
-
-# Handle User Input
-user_input = st.query_params.get("component_value")
-if user_input:
-    input_type = user_input.get("type")
-    input_content = user_input.get("content")
-    if input_type == "text":
-        st.session_state["messages"].append({"role": "user", "content": input_content})
-        with st.spinner("AI is thinking..."):
-            response = generate_text_response(input_content)
-            st.session_state["messages"].append({"role": "assistant", "content": response})
-    elif input_type == "image":
-        st.session_state["messages"].append({"role": "user", "content": input_content})
-        with st.spinner("Generating image..."):
-            image_url = generate_image(input_content)
-            st.session_state["messages"].append({"role": "image", "content": image_url})
-    st.experimental_rerun()
+# Input Row (Textbox and Buttons)
+col1, col2, col3 = st.columns([5, 1, 1])
+with col1:
+    user_input = st.text_input("", placeholder="Type a message...")
+with col2:
+    if st.button("Send", key="send_button"):
+        if user_input:
+            st.session_state["messages"].append({"role": "user", "content": user_input})
+            with st.spinner("AI is thinking..."):
+                response = generate_text_response(user_input)
+                st.session_state["messages"].append({"role": "assistant", "content": response})
+            st.experimental_rerun()
+with col3:
+    if st.button("Image", key="image_button"):
+        if user_input:
+            st.session_state["messages"].append({"role": "user", "content": user_input})
+            with st.spinner("Generating image..."):
+                image_url = generate_image(user_input)
+                st.session_state["messages"].append({"role": "image", "content": image_url})
+            st.experimental_rerun()
 
 # Close Chat Container
 st.markdown("</div>", unsafe_allow_html=True)
