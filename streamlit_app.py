@@ -1,4 +1,4 @@
-import streamlit as st 
+import streamlit as st
 import os
 import google.generativeai as genai
 import pyttsx3
@@ -35,19 +35,12 @@ def role_to_streamlit(role):
 
 # Initialize chat history in session state
 if "messages" not in st.session_state:
-    st.session_state.messages = model.start_chat(history=[])
+    st.session_state.messages = []
 
 # Display chat history
-for message in st.session_state.messages.history:
-    role = role_to_streamlit(getattr(message, "role"))
-    text = ""
-    parts = getattr(message, "parts", None)  # Check if parts exist
-    if parts:
-        for part in parts:
-            if hasattr(part, "text"):  # Check if `text` attribute exists
-                text = part.text
-                break
-
+for message in st.session_state.messages:
+    role = role_to_streamlit(message["role"])
+    text = message["text"]
     with st.chat_message(role):
         st.markdown(text)
 
@@ -60,7 +53,8 @@ with footer_container:
 # If user provides text input
 if prompt_text:
     st.chat_message("user").markdown(prompt_text)
-    response = st.session_state.messages.send_message(prompt_text) 
+    response = model.send_message(prompt_text)
+    st.session_state.messages.append({"role": "assistant", "text": response.text})
     with st.chat_message("assistant"):
         st.markdown(response.text)
 
@@ -76,14 +70,12 @@ if audio_bytes:
         transcript = speech_to_text(webm_file_path)
         if transcript:
             # Send transcribed text as a message
-            st.session_state.messages.send_message(transcript)
-            with st.chat_message("user"):
-                st.write(transcript)
-            os.remove(webm_file_path)
-
-            response = st.session_state.messages.send_message(transcript)
+            st.chat_message("user").markdown(transcript)
+            response = model.send_message(transcript)
+            st.session_state.messages.append({"role": "assistant", "text": response.text})
             with st.chat_message("assistant"):
                 st.markdown(response.text)
             speak(response.text)  # Speak the response text
         else:
             st.error("Could not transcribe the audio. Please try again.")
+        os.remove(webm_file_path)
