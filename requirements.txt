@@ -1,5 +1,4 @@
 streamlit 
-steamlit_chat
 openai 
 pyttsx3
 
