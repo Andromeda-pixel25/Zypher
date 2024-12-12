@@ -4,3 +4,4 @@ SpeechRecognition
 pyttsx3
 requests
 TensorFlow
+tf-keras
