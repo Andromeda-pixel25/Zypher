@@ -1,82 +1,130 @@
 import streamlit as st
 import os
 import google.generativeai as genai
-import pyttsx3
-from streamlit_mic_recorder import mic_recorder, speech_to_text
-from audio_recorder_streamlit import audio_recorder
+import openai
+from streamlit.components.v1 import html
 
-# Initialize Google Generative AI
-genai.configure(api_key="AIzaSyA7V6N800cWrvaW2hlgHazi62i4Gh-idZk")
-model = genai.GenerativeModel('gemini-pro')
+# Set up Google Generative AI
+api_key = st.secrets["GOOGLE_API_KEY"]
+genai.configure(api_key=api_key)
+model = genai.GenerativeModel("gemini-pro")
 
-# Initialize the pyttsx3 engine
-engine = pyttsx3.init()
+# Set up OpenAI API for DALL-E
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-st.title("ZypherAi")
-st.markdown("_________________________________________________________________________________")
-st.markdown("Powered by Google Generative AI for Seamless Conversations")
-image = "https://github.com/Andromeda-pixel25/smartbot-using-python/blob/main/letter-z%20(1).png?raw=true"
-st.image(image)
+# Page configuration
+st.set_page_config(page_title="Chatbot", layout="wide")
 
-# Text to Speech function
-def speak(text):
-    engine.say(text)  # Use the 'say' method correctly
-    engine.runAndWait()
+# Navigation Menu
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Go to", ["Text Chat", "Voice Chat", "Image Generator"])
 
-# Mapping the role to streamlit format
-def role_to_streamlit(role):
-    if role == "model":
-        return "assistant"
-    else:
-        return role
+# Common Styles
+styles = """
+<style>
+body {
+    font-family: Arial, sans-serif;
+}
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 80vh;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+}
+.chat-input {
+    position: fixed;
+    bottom: 20px;
+    width: 80%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+}
+.chat-input input {
+    flex-grow: 1;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    margin-right: 10px;
+}
+.chat-input button {
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+}
+.chat-input button:hover {
+    background-color: #0056b3;
+}
+</style>
+"""
 
-# Initialize chat session in session state
-if "chat_session" not in st.session_state:
-    st.session_state.chat_session = model.start_chat(history=[])
+# Page 1: Text Chat
+if page == "Text Chat":
+    st.title("Text Chat with ZypherAI")
+    st.markdown(styles, unsafe_allow_html=True)
 
-# Initialize chat history in session state
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = ["Assistant: How can I assist you today?"]
 
-# Display chat history
-for message in st.session_state.messages:
-    role = role_to_streamlit(message["role"])
-    text = message["text"]
-    with st.chat_message(role):
-        st.markdown(text)
+    # Chat history
+    with st.container():
+        st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+        for message in st.session_state.chat_history:
+            st.markdown(f"{message}")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# Prompt and voice input
-prompt_text = st.chat_input("Ask away...")
-footer_container = st.container()
-with footer_container:
-    audio_bytes = audio_recorder()
+    # User input
+    user_input = st.text_input("Type your message", "", key="text_chat_input")
+    if st.button("Send"):
+        st.session_state.chat_history.append(f"User: {user_input}")
+        response = model.chat(user_input)
+        st.session_state.chat_history.append(f"Assistant: {response.text}")
 
-# If user provides text input
-if prompt_text:
-    st.chat_message("user").markdown(prompt_text)
-    response = st.session_state.chat_session.send_message(prompt_text)
-    st.session_state.messages.append({"role": "assistant", "text": response.text})
-    with st.chat_message("assistant"):
-        st.markdown(response.text)
+# Page 2: Voice Chat
+elif page == "Voice Chat":
+    st.title("Voice Chat with ZypherAI")
+    st.markdown(styles, unsafe_allow_html=True)
 
-# For voice input
-if audio_bytes:
-    with st.spinner("Transcribing..."):
-        # Write the audio bytes to a temporary file
-        webm_file_path = "temp_audio.mp3"
-        with open(webm_file_path, "wb") as f:
-            f.write(audio_bytes)
+    # Microphone functionality
+    def record_audio():
+        """Record audio using JavaScript and HTML5."""
+        audio_html = """
+        <script>
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    const mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+                    mediaRecorder.ondataavailable = e => {
+                        const audioBlob = new Blob([e.data], { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(audioUrl);
+                        audio.play();
+                    };
+                })
+                .catch(error => console.error("Error accessing the microphone:", error));
+        }
+        </script>
+        <button onclick="startRecording()">Start Recording</button>
+        """
+        return audio_html
 
-        # Convert the audio to text using the speech_to_text function
-        transcript = speech_to_text(webm_file_path)
-        if transcript:
-            # Send transcribed text as a message
-            st.chat_message("user").markdown(transcript)
-            response = st.session_state.chat_session.send_message(transcript)
-            st.session_state.messages.append({"role": "assistant", "text": response.text})
-            with st.chat_message("assistant"):
-                st.markdown(response.text)
-            speak(response.text)  # Speak the response text
-        else:
-            st.error("Could not transcribe the audio. Please try again.")
-        os.remove(webm_file_path)
+    st.markdown(record_audio(), unsafe_allow_html=True)
+
+# Page 3: Image Generator
+elif page == "Image Generator":
+    st.title("Image Generator")
+    st.markdown(styles, unsafe_allow_html=True)
+
+    prompt = st.text_input("Describe the image you want to generate")
+    if st.button("Generate Image"):
+        with st.spinner("Creating your image..."):
+            response = openai.Image.create(prompt=prompt, n=1, size="1024x1024")
+            image_url = response['data'][0]['url']
+            st.image(image_url, caption="Generated Image")
