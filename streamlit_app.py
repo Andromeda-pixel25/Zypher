@@ -26,7 +26,7 @@ def render_chat_history():
 
 def get_serverless_response(prompt):
     url = "https://api-inference.huggingface.co/models/gpt2"
-    headers = {"Authorization": "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"}
+    headers = {"Authorization": "Bearer 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"}
     payload = {"inputs": prompt}
     response = requests.post(url, headers=headers, json=payload)
     return response.json()["generated_text"] if response.status_code == 200 else "Error: Unable to fetch response."
