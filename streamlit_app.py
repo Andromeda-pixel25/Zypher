@@ -167,7 +167,7 @@ st.markdown(
 html(custom_js, height=0)
 
 # Handle User Input
-message = st.query_params().get("component_value")
+message = st.experimental_get_query_params().get("component_value")
 if message:
     st.session_state["messages"].append({"role": "user", "content": message})
     with st.spinner("AI is thinking..."):
