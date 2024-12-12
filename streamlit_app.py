@@ -1,78 +1,115 @@
 import streamlit as st
-import speech_recognition as sr
-import tempfile
+import openai
+import pyttsx3
+import base64
+from streamlit.components.v1 import html
 
-# App title
-st.set_page_config(page_title="Zypher Chatbot")
-st.title("Zypher Chatbot")
-st.markdown("This chatbot leverages advanced AI for seamless conversations!")
+# Set OpenAI API Key
+openai.api_key = "YOUR_OPENAI_API_KEY"
 
-# Sidebar configurations
-st.sidebar.title("Zypher AI")
-st.sidebar.markdown("Record your voice or type your query!")
+# Text-to-Speech engine
+engine = pyttsx3.init()
 
-# Chat history initialization
-if "messages" not in st.session_state:
-    st.session_state["messages"] = [{"role": "assistant", "content": "How may I assist you today?"}]
+# Function: Text-to-Speech
+def speak_text(text):
+    engine.say(text)
+    engine.runAndWait()
 
-# Display chat history
-for msg in st.session_state["messages"]:
-    with st.chat_message(msg["role"]):
-        st.write(msg["content"])
+# Function: OpenAI GPT Query
+def generate_text_response(prompt):
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": prompt}],
+    )
+    return response["choices"][0]["message"]["content"]
 
-# Function to process audio and transcribe it
-def record_and_transcribe():
-    recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.info("Listening... Speak now.")
-        try:
-            audio = recognizer.listen(source, timeout=5, phrase_time_limit=10)
-            st.success("Recording complete. Transcribing...")
-            text = recognizer.recognize_google(audio)
-            return text
-        except sr.UnknownValueError:
-            return "Sorry, I couldn't understand that."
-        except Exception as e:
-            return f"Error: {e}"
+# Function: OpenAI DALL·E Query
+def generate_image(prompt):
+    response = openai.Image.create(prompt=prompt, n=1, size="512x512")
+    return response["data"][0]["url"]
 
-# Function to generate AI response (placeholder logic)
-def generate_ai_response(user_input):
-    # Replace this logic with your AI model integration
-    return f"AI Response to: {user_input}"
+# Custom Speech Recorder with JavaScript
+def record_audio():
+    recorder_script = """
+    <script>
+        const recordButton = document.getElementById("recordButton");
+        const stopButton = document.getElementById("stopButton");
+        const audioText = document.getElementById("audioText");
 
-# Input container
-input_container = st.container()
-with input_container:
-    cols = st.columns([10, 1, 1])  # Adjust column widths
-    user_input = cols[0].text_input("Type your message...", key="text_input", label_visibility="collapsed")
-    mic_button = cols[1].button("🎙️", key="mic_button")
-    send_button = cols[2].button("➡️", key="send_button")
+        let mediaRecorder;
+        let audioChunks = [];
 
-# Voice recording and transcription prompt (above the text box)
-if mic_button:
-    with st.spinner("Recording..."):
-        transcript = record_and_transcribe()
+        recordButton.onclick = async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
 
-    if transcript:
-        # Add transcription to chat and generate a response
-        st.session_state["messages"].append({"role": "user", "content": transcript})
-        with st.chat_message("user"):
-            st.write(transcript)
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
 
-        # Generate and display AI response
-        response = generate_ai_response(transcript)
-        st.session_state["messages"].append({"role": "assistant", "content": response})
-        with st.chat_message("assistant"):
-            st.write(response)
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(audioChunks, { type: "audio/webm" });
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64String = reader.result.split(",")[1];
+                    audioText.value = base64String;
+                };
+                reader.readAsDataURL(blob);
+            };
 
-# Handle text input submission
-if send_button and user_input:
-    st.session_state["messages"].append({"role": "user", "content": user_input})
-    with st.chat_message("user"):
-        st.write(user_input)
+            mediaRecorder.start();
+        };
 
-    # Generate and display AI response
-    response = generate_ai_response(user_input)
-    st.session_state["messages"].append({"role": "assistant", "content": response})
-    with st.chat_message("assistant"):
-        st.write(response)
+        stopButton.onclick = () => {
+            mediaRecorder.stop();
+        };
+    </script>
+
+    <div>
+        <button id="recordButton">🎙️ Start Recording</button>
+        <button id="stopButton">⏹️ Stop Recording</button>
+        <input type="hidden" id="audioText" name="audioText" value="">
+    </div>
+    """
+    return recorder_script
+
+# Streamlit UI
+st.set_page_config(page_title="AI Assistant", layout="wide")
+
+# App Title
+st.title("AI Assistant with Text, Speech, and Image Generation")
+st.markdown("---")
+
+# Sidebar
+with st.sidebar:
+    st.header("🎨 Generate AI Images")
+    image_prompt = st.text_input("Enter a prompt for an image:")
+    if st.button("Generate Image"):
+        if image_prompt:
+            image_url = generate_image(image_prompt)
+            st.image(image_url, caption="Generated Image", use_column_width=True)
+        else:
+            st.warning("Please enter an image prompt.")
+
+# Chat Interface
+st.header("💬 Chat with AI")
+user_query = st.text_input("Enter your message:")
+if st.button("Send"):
+    if user_query:
+        with st.spinner("Generating response..."):
+            ai_response = generate_text_response(user_query)
+            st.write("**AI:**", ai_response)
+            if st.checkbox("🔊 Speak Response"):
+                speak_text(ai_response)
+    else:
+        st.warning("Please enter a message.")
+
+# Speech Input
+st.header("🎙️ Voice Input")
+st.markdown("Click the buttons below to record your voice.")
+html(record_audio(), height=150)
+
+# Footer
+st.markdown("---")
+st.markdown("Made with ❤️ by [Your Name]")
