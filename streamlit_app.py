@@ -1,37 +1,39 @@
-import streamlit as st
+import streamlit as st 2
 import os
 import google.generativeai as genai
 import pyttsx3
+from streamlit_mic_recorder import mic_recorder, speech_to_text
 from audio_recorder_streamlit import audio_recorder
-from streamlit_mic_recorder import speech_to_text
 
 # Initialize Google Generative AI
 genai.configure(api_key="AIzaSyA7V6N800cWrvaW2hlgHazi62i4Gh-idZk")
 model = genai.GenerativeModel('gemini-pro')
 
-# Initialize pyttsx3 for text-to-speech functionality
+# Initialize messages
+messages = model.start_chat()
+
+# Initialize the pyttsx3 engine
 engine = pyttsx3.init()
 
-# Title and intro
 st.title("ZypherAi")
 st.markdown("_________________________________________________________________________________")
 st.markdown("Powered by Google Generative AI for Seamless Conversations")
 image = "https://github.com/Andromeda-pixel25/smartbot-using-python/blob/main/letter-z%20(1).png?raw=true"
 st.image(image)
 
-# Text-to-Speech function
+# Text to Speech function
 def speak(text):
     engine.say(text)  # Use the 'say' method correctly
     engine.runAndWait()
 
-# Role conversion for display
+# Mapping the role to streamlit format
 def role_to_streamlit(role):
     if role == "model":
         return "assistant"
     else:
         return role
 
-# Initialize chat history if not already in session state
+# Initialize chat history in session state
 if "messages" not in st.session_state:
     st.session_state.messages = model.start_chat(history=[])
 
@@ -39,32 +41,30 @@ if "messages" not in st.session_state:
 for message in st.session_state.messages.history:
     role = role_to_streamlit(getattr(message, "role"))
     text = ""
-    parts = getattr(message, "parts", None)
+    parts = getattr(message, "parts", None)  # Check if parts exist
     if parts:
         for part in parts:
-            if hasattr(part, "text"):
+            if hasattr(part, "text"):  # Check if `text` attribute exists
                 text = part.text
                 break
+
     with st.chat_message(role):
         st.markdown(text)
 
-# Text input and voice input components
+# Prompt and voice input
 prompt_text = st.chat_input("Ask away...")
-
-# Record audio button in footer
 footer_container = st.container()
 with footer_container:
     audio_bytes = audio_recorder()
 
-# Handle text input
+# If user provides text input
 if prompt_text:
     st.chat_message("user").markdown(prompt_text)
-    response = st.session_state.messages.send_message(prompt_text)
+    response = st.session_state.messages.send_message(prompt_text) 
     with st.chat_message("assistant"):
         st.markdown(response.text)
-    speak(response.text)  # Speak the response
 
-# Handle voice input
+# For voice input
 if audio_bytes:
     with st.spinner("Transcribing..."):
         # Write the audio bytes to a temporary file
@@ -81,10 +81,9 @@ if audio_bytes:
                 st.write(transcript)
             os.remove(webm_file_path)
 
-            # Get the response and display it
             response = st.session_state.messages.send_message(transcript)
             with st.chat_message("assistant"):
                 st.markdown(response.text)
-            speak(response.text)  # Speak the response
+            speak(response.text)  # Speak the response text
         else:
             st.error("Could not transcribe the audio. Please try again.")
