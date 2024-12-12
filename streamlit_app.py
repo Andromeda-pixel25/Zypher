@@ -9,9 +9,6 @@ from audio_recorder_streamlit import audio_recorder
 genai.configure(api_key="AIzaSyA7V6N800cWrvaW2hlgHazi62i4Gh-idZk")
 model = genai.GenerativeModel('gemini-pro')
 
-# Initialize messages
-messages = model.start_chat()
-
 # Initialize the pyttsx3 engine
 engine = pyttsx3.init()
 
@@ -33,6 +30,10 @@ def role_to_streamlit(role):
     else:
         return role
 
+# Initialize chat session in session state
+if "chat_session" not in st.session_state:
+    st.session_state.chat_session = model.start_chat(history=[])
+
 # Initialize chat history in session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -53,7 +54,7 @@ with footer_container:
 # If user provides text input
 if prompt_text:
     st.chat_message("user").markdown(prompt_text)
-    response = model.send_message(prompt_text)
+    response = st.session_state.chat_session.send_message(prompt_text)
     st.session_state.messages.append({"role": "assistant", "text": response.text})
     with st.chat_message("assistant"):
         st.markdown(response.text)
@@ -71,7 +72,7 @@ if audio_bytes:
         if transcript:
             # Send transcribed text as a message
             st.chat_message("user").markdown(transcript)
-            response = model.send_message(transcript)
+            response = st.session_state.chat_session.send_message(transcript)
             st.session_state.messages.append({"role": "assistant", "text": response.text})
             with st.chat_message("assistant"):
                 st.markdown(response.text)
