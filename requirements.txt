@@ -8,4 +8,3 @@ audio_recorder_streamlit
 gtts
 playsound==1.2.2
 pyaudio
-alsa-utils
