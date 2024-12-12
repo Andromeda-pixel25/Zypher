@@ -5,7 +5,7 @@ from audio_recorder_streamlit import audio_recorder
 
 # App title
 st.set_page_config(page_title="Zypher Chatbot")
-st.title('Zypher Chatbot')
+st.title("Zypher Chatbot")
 st.markdown("This chatbot leverages advanced AI for seamless conversations!")
 
 # Sidebar configurations
@@ -39,21 +39,18 @@ def generate_ai_response(user_input):
     # Replace this logic with your AI model integration
     return f"AI Response to: {user_input}"
 
-# Text input and voice recording in input area
+# Input container
 input_container = st.container()
 with input_container:
-    cols = st.columns([8, 1, 1])  # Adjust column widths
-    with cols[0]:
-        prompt = st.text_input("Ask away...", key="text_input")
-    with cols[1]:
-        mic_clicked = st.button("🎤", key="mic_button")
-    with cols[2]:
-        send_clicked = st.button("➡️", key="send_button")
+    cols = st.columns([10, 1, 1])  # Adjust column widths
+    user_input = cols[0].text_input("Type your message...", key="text_input", label_visibility="collapsed")
+    mic_button = cols[1].button("🎙️", key="mic_button")
+    send_button = cols[2].button("➡️", key="send_button")
 
-# Handle microphone input
-if mic_clicked:
-    st.info("Recording...")
-    audio_bytes = audio_recorder()
+# Voice recording and transcription prompt (above the text box)
+if mic_button:
+    with st.spinner("Recording... Click again to stop."):
+        audio_bytes = audio_recorder()
 
     if audio_bytes:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
@@ -77,13 +74,13 @@ if mic_clicked:
                 st.write(response)
 
 # Handle text input submission
-if send_clicked and prompt:
-    st.session_state["messages"].append({"role": "user", "content": prompt})
+if send_button and user_input:
+    st.session_state["messages"].append({"role": "user", "content": user_input})
     with st.chat_message("user"):
-        st.write(prompt)
+        st.write(user_input)
 
     # Generate and display AI response
-    response = generate_ai_response(prompt)
+    response = generate_ai_response(user_input)
     st.session_state["messages"].append({"role": "assistant", "content": response})
     with st.chat_message("assistant"):
         st.write(response)
