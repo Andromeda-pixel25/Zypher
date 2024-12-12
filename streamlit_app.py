@@ -27,38 +27,34 @@ def generate_image(prompt):
     response = openai.Image.create(prompt=prompt, n=1, size="512x512")
     return response["data"][0]["url"]
 
-# JavaScript for Speech Recording
-def record_audio_js():
-    recorder_script = """
-    <script>
-        let mediaRecorder;
-        let audioChunks = [];
-        const startRecording = () => {
-            navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-                mediaRecorder = new MediaRecorder(stream);
-                mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
-                mediaRecorder.start();
-            });
-        };
-        const stopRecording = () => {
-            mediaRecorder.stop();
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(audioChunks, { type: "audio/webm" });
-                const url = URL.createObjectURL(blob);
-                const audio = document.createElement("audio");
-                audio.src = url;
-                audio.controls = true;
-                document.body.appendChild(audio);
-            };
-        };
-        window.startRecording = startRecording;
-        window.stopRecording = stopRecording;
-    </script>
-    """
-    return recorder_script
-
 # Streamlit UI Configuration
 st.set_page_config(page_title="ChatGPT-like Assistant", layout="wide")
+
+# JavaScript for Handling Input
+custom_js = """
+<script>
+    const sendButton = document.getElementById('send-button');
+    const micButton = document.getElementById('mic-button');
+    const textInput = document.getElementById('text-input');
+
+    // Send Button Logic
+    sendButton.addEventListener('click', () => {
+        const message = textInput.value;
+        if (message) {
+            Streamlit.setComponentValue(message);
+            textInput.value = '';  // Clear input after sending
+        }
+    });
+
+    // Enter Key to Send
+    textInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sendButton.click();
+        }
+    });
+</script>
+"""
 
 # Chat Style Layout
 st.markdown(
@@ -155,7 +151,7 @@ for message in st.session_state["messages"]:
     elif message["role"] == "assistant":
         st.markdown(f"<div class='chat-box assistant-box'>{message['content']}</div>", unsafe_allow_html=True)
 
-# Input Row
+# Input Row (Custom HTML/JS)
 st.markdown(
     """
     <div class='input-row'>
@@ -168,19 +164,13 @@ st.markdown(
 )
 
 # JavaScript Recorder
-html(record_audio_js(), height=0)
+html(custom_js, height=0)
 
-# Text Input Handling
-input_query = st.text_input("Enter your message below:")
-
-if st.button("Send"):
-    if input_query:
-        # Append user input
-        st.session_state["messages"].append({"role": "user", "content": input_query})
-        with st.spinner("AI is thinking..."):
-            response = generate_text_response(input_query)
-            # Append AI response
-            st.session_state["messages"].append({"role": "assistant", "content": response})
-            st.experimental_rerun()
-    else:
-        st.warning("Please enter a message!")
+# Handle User Input
+message = st.experimental_get_query_params().get("component_value")
+if message:
+    st.session_state["messages"].append({"role": "user", "content": message})
+    with st.spinner("AI is thinking..."):
+        response = generate_text_response(message)
+        st.session_state["messages"].append({"role": "assistant", "content": response})
+        st.experimental_rerun()
