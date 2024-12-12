@@ -21,7 +21,7 @@ for msg in st.session_state["messages"]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# Speech-to-text function
+# Function to process audio and transcribe it
 def process_audio(audio_file_path):
     recognizer = sr.Recognizer()
     try:
@@ -34,37 +34,56 @@ def process_audio(audio_file_path):
     except Exception as e:
         return f"Error: {e}"
 
-# Handle voice input via audio recorder
-st.markdown("### Record your voice:")
-audio_bytes = audio_recorder()
+# Function to generate AI response (placeholder logic)
+def generate_ai_response(user_input):
+    # Replace this logic with your AI model integration
+    return f"AI Response to: {user_input}"
 
-if audio_bytes:
-    # Save audio to a temporary file
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
-        temp_audio.write(audio_bytes)
-        audio_path = temp_audio.name
+# Text input and voice recording in input area
+input_container = st.container()
+with input_container:
+    cols = st.columns([8, 1, 1])  # Adjust column widths
+    with cols[0]:
+        prompt = st.text_input("Ask away...", key="text_input")
+    with cols[1]:
+        mic_clicked = st.button("🎤", key="mic_button")
+    with cols[2]:
+        send_clicked = st.button("➡️", key="send_button")
 
-    # Process the audio and generate text
-    with st.spinner("Processing your voice..."):
-        transcript = process_audio(audio_path)
+# Handle microphone input
+if mic_clicked:
+    st.info("Recording...")
+    audio_bytes = audio_recorder()
 
-    # Display transcribed text
-    if transcript:
-        st.session_state["messages"].append({"role": "user", "content": transcript})
-        with st.chat_message("user"):
-            st.write(transcript)
+    if audio_bytes:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+            temp_audio.write(audio_bytes)
+            audio_path = temp_audio.name
 
-# Text input for fallback
-prompt = st.chat_input("Type your query...")
-if prompt:
+        # Process the audio and transcribe it
+        with st.spinner("Transcribing your voice..."):
+            transcript = process_audio(audio_path)
+
+        # Add transcription to chat and generate a response
+        if transcript:
+            st.session_state["messages"].append({"role": "user", "content": transcript})
+            with st.chat_message("user"):
+                st.write(transcript)
+
+            # Generate and display AI response
+            response = generate_ai_response(transcript)
+            st.session_state["messages"].append({"role": "assistant", "content": response})
+            with st.chat_message("assistant"):
+                st.write(response)
+
+# Handle text input submission
+if send_clicked and prompt:
     st.session_state["messages"].append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.write(prompt)
 
-# Generate AI response
-if st.session_state["messages"][-1]["role"] == "user":
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            response = "This is a placeholder response. Replace with your AI logic."
-            st.write(response)
+    # Generate and display AI response
+    response = generate_ai_response(prompt)
     st.session_state["messages"].append({"role": "assistant", "content": response})
+    with st.chat_message("assistant"):
+        st.write(response)
