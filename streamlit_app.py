@@ -1,96 +1,99 @@
-# Zypher Chatbot
-# Created by: [Your Name]
-
 import streamlit as st
-from transformers import pipeline
-import speech_recognition as sr
-import pyttsx3
+import os
 import requests
+import pyttsx3
+from streamlit_mic_recorder import mic_recorder, speech_to_text
+from audio_recorder_streamlit import audio_recorder
 
-# Page Configurations
-st.set_page_config(page_title="Zypher Chatbot", layout="centered")
-
-# Custom CSS for minimalistic UI
-st.markdown(
-    """<style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f4f4f9;
-        color: #333;
-    }
-    .stButton > button {
-        background-color: #007bff;
-        color: white;
-        border-radius: 5px;
-        padding: 5px 10px;
-    }
-    </style>""",
-    unsafe_allow_html=True
-)
-
-# Sidebar Navigation
-st.sidebar.title("Zypher Chatbot")
-page = st.sidebar.radio("Navigate", ["Text Response", "Voice Recognition", "Image Generation"])
-
-# Global Variables
-text_generator = pipeline("text-generation", model="gpt2")
-recognizer = sr.Recognizer()
+# Initialize pyttsx3 engine
 engine = pyttsx3.init()
 
-# Page 1: Text Response
-def text_response():
-    st.title("Zypher - Text Response")
-    user_input = st.text_area("Enter your message:")
-    if st.button("Send"):
+def speak(text):
+    engine.say(text)
+    engine.runAndWait()
+
+def role_to_streamlit(role):
+    return "assistant" if role == "model" else role
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+def render_chat_history():
+    for message in st.session_state.messages:
+        role, text = message
+        with st.chat_message(role):
+            st.markdown(text)
+
+def get_serverless_response(prompt):
+    url = "https://api-inference.huggingface.co/models/gpt2"
+    headers = {"Authorization": "Bearer YOUR_HUGGINGFACE_API_KEY"}
+    payload = {"inputs": prompt}
+    response = requests.post(url, headers=headers, json=payload)
+    return response.json()["generated_text"] if response.status_code == 200 else "Error: Unable to fetch response."
+
+# Pages
+pages = ["Text Response", "Voice Recognition", "Image Generation"]
+st.sidebar.title("ZypherAi Navigation")
+selected_page = st.sidebar.radio("Go to", pages)
+
+if selected_page == "Text Response":
+    st.title("ZypherAi - Text Response")
+    st.markdown("Powered by Serverless Inference API")
+    render_chat_history()
+    prompt_text = st.chat_input("Ask away...")
+    if prompt_text:
+        st.chat_message("user").markdown(prompt_text)
         with st.spinner("Zypher is thinking..."):
-            response = text_generator(user_input, max_length=50, num_return_sequences=1)
-            st.success(response[0]['generated_text'])
+            response = get_serverless_response(prompt_text)
+            st.session_state.messages.append(("assistant", response))
+            with st.chat_message("assistant"):
+                st.markdown(response)
+            speak(response)
 
-# Page 2: Voice Recognition
-def voice_recognition():
-    st.title("Zypher - Voice Recognition")
-    st.info("Click the button below and speak to Zypher.")
-    if st.button("Speak"):
-        with sr.Microphone() as source:
-            st.write("Listening...")
-            try:
-                audio = recognizer.listen(source, timeout=5)
-                text = recognizer.recognize_google(audio)
-                st.write("You said:", text)
-                with st.spinner("Zypher is responding..."):
-                    response = text_generator(text, max_length=50, num_return_sequences=1)
-                    st.success(response[0]['generated_text'])
-                    engine.say(response[0]['generated_text'])
-                    engine.runAndWait()
-            except Exception as e:
-                st.error("Could not process your voice input: " + str(e))
+elif selected_page == "Voice Recognition":
+    st.title("ZypherAi - Voice Recognition")
+    st.markdown("Talk to Zypher using your voice")
+    footer_container = st.container()
+    with footer_container:
+        audio_bytes = audio_recorder()
+    if audio_bytes:
+        with st.spinner("Transcribing..."):
+            webm_file_path = "temp_audio.mp3"
+            with open(webm_file_path, "wb") as f:
+                f.write(audio_bytes)
+            transcript = speech_to_text(webm_file_path)
+            if transcript:
+                st.chat_message("user").write(transcript)
+                with st.spinner("Zypher is thinking..."):
+                    response = get_serverless_response(transcript)
+                    st.session_state.messages.append(("assistant", response))
+                    with st.chat_message("assistant"):
+                        st.markdown(response)
+                    speak(response)
+                os.remove(webm_file_path)
+            else:
+                st.error("Could not transcribe the audio. Please try again.")
 
-# Page 3: Image Generation
-def image_generation():
-    st.title("Zypher - Image Generation")
+elif selected_page == "Image Generation":
+    st.title("ZypherAi - Image Generation")
+    st.markdown("Generate images from text prompts.")
     user_prompt = st.text_input("Describe the image you want to generate:")
     if st.button("Generate Image"):
         with st.spinner("Zypher is creating your image..."):
             try:
                 response = requests.post(
-                    "https://api.deepai.org/api/text2img",
-                    data={'text': user_prompt},
-                    headers={'api-key': 'YOUR_API_KEY'}
+                    "https://api-inference.huggingface.co/models/stable-diffusion-v1-4",
+                    headers={"Authorization": "Bearer YOUR_HUGGINGFACE_API_KEY"},
+                    json={"inputs": user_prompt}
                 )
-                image_url = response.json()["output_url"]
-                st.image(image_url, caption="Generated by Zypher")
+                image_url = response.json().get("generated_image_url", "")
+                if image_url:
+                    st.image(image_url, caption="Generated by Zypher")
+                else:
+                    st.error("Image generation failed: " + response.text)
             except Exception as e:
                 st.error("Image generation failed: " + str(e))
 
-# Render Pages
-if page == "Text Response":
-    text_response()
-elif page == "Voice Recognition":
-    voice_recognition()
-elif page == "Image Generation":
-    image_generation()
-
-# Footer
 st.sidebar.markdown("---")
-st.sidebar.text("Zypher Chatbot")
+st.sidebar.text("ZypherAi")
 st.sidebar.text("Created by: [Your Name]")
