@@ -1,118 +1,90 @@
 import streamlit as st
-import openai
-from streamlit_chat import message
+import os
+import google.generativeai as genai
+import pyttsx3
+from audio_recorder_streamlit import audio_recorder
+from streamlit_mic_recorder import speech_to_text
 
-# Configure the OpenAI API
-openai.api_key = "your-api-key-here"
+# Initialize Google Generative AI
+genai.configure(api_key="AIzaSyA7V6N800cWrvaW2hlgHazi62i4Gh-idZk")
+model = genai.GenerativeModel('gemini-pro')
 
-# Set page layout and styling
-st.set_page_config(page_title="ChatGPT-like UI", layout="wide")
+# Initialize pyttsx3 for text-to-speech functionality
+engine = pyttsx3.init()
 
-# Custom CSS for fixing the textbox at the bottom and styling the page
-st.markdown(
-    """
-    <style>
-        .stApp {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            height: 100vh;
-        }
-        .chat-container {
-            flex: 1;
-            overflow-y: auto;
-            padding-bottom: 100px;
-        }
-        .input-container {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: #f9f9f9;
-            border-top: 1px solid #ddd;
-            padding: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .input-container input[type="text"] {
-            flex: 1;
-            padding: 10px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        .input-container button {
-            padding: 10px 15px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-        }
-        .input-container button:hover {
-            background-color: #45a049;
-        }
-        .icon-button {
-            background: none;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .icon-button img {
-            width: 24px;
-            height: 24px;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# Title and intro
+st.title("ZypherAi")
+st.markdown("_________________________________________________________________________________")
+st.markdown("Powered by Google Generative AI for Seamless Conversations")
+image = "https://github.com/Andromeda-pixel25/smartbot-using-python/blob/main/letter-z%20(1).png?raw=true"
+st.image(image)
 
-# Session state to store chat history
+# Text-to-Speech function
+def speak(text):
+    engine.say(text)  # Use the 'say' method correctly
+    engine.runAndWait()
+
+# Role conversion for display
+def role_to_streamlit(role):
+    if role == "model":
+        return "assistant"
+    else:
+        return role
+
+# Initialize chat history if not already in session state
 if "messages" not in st.session_state:
-    st.session_state["messages"] = []
+    st.session_state.messages = model.start_chat(history=[])
 
-# Chat display container
-st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-for message_data in st.session_state.messages:
-    message(message_data["content"], is_user=message_data["is_user"])
-st.markdown('</div>', unsafe_allow_html=True)
+# Display chat history
+for message in st.session_state.messages.history:
+    role = role_to_streamlit(getattr(message, "role"))
+    text = ""
+    parts = getattr(message, "parts", None)
+    if parts:
+        for part in parts:
+            if hasattr(part, "text"):
+                text = part.text
+                break
+    with st.chat_message(role):
+        st.markdown(text)
 
-# Input container at the bottom
-st.markdown('<div class="input-container">', unsafe_allow_html=True)
-col1, col2, col3 = st.columns([8, 1, 1], gap="small")
+# Text input and voice input components
+prompt_text = st.chat_input("Ask away...")
 
-with col1:
-    user_input = st.text_input("", placeholder="Type your message here...", key="user_input")
+# Record audio button in footer
+footer_container = st.container()
+with footer_container:
+    audio_bytes = audio_recorder()
 
-with col2:
-    send_button = st.button("Send")
+# Handle text input
+if prompt_text:
+    st.chat_message("user").markdown(prompt_text)
+    response = st.session_state.messages.send_message(prompt_text)
+    with st.chat_message("assistant"):
+        st.markdown(response.text)
+    speak(response.text)  # Speak the response
 
-with col3:
-    mic_button = st.button("🎤")  # Placeholder for mic functionality
-st.markdown('</div>', unsafe_allow_html=True)
+# Handle voice input
+if audio_bytes:
+    with st.spinner("Transcribing..."):
+        # Write the audio bytes to a temporary file
+        webm_file_path = "temp_audio.mp3"
+        with open(webm_file_path, "wb") as f:
+            f.write(audio_bytes)
 
-# Handle user input
-if send_button and user_input:
-    # Append user message
-    st.session_state.messages.append({"content": user_input, "is_user": True})
+        # Convert the audio to text using the speech_to_text function
+        transcript = speech_to_text(webm_file_path)
+        if transcript:
+            # Send transcribed text as a message
+            st.session_state.messages.send_message(transcript)
+            with st.chat_message("user"):
+                st.write(transcript)
+            os.remove(webm_file_path)
 
-    # Call OpenAI API to get a response
-    with st.spinner("ChatGPT is typing..."):
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": user_input}]
-        )
-        reply = response.choices[0].message.content
-
-    # Append bot response
-    st.session_state.messages.append({"content": reply, "is_user": False})
-
-    # Clear user input
-    st.session_state.user_input = ""
-
-if mic_button:
-    st.warning("Mic functionality is under development.")
+            # Get the response and display it
+            response = st.session_state.messages.send_message(transcript)
+            with st.chat_message("assistant"):
+                st.markdown(response.text)
+            speak(response.text)  # Speak the response
+        else:
+            st.error("Could not transcribe the audio. Please try again.")
