@@ -1,7 +1,6 @@
 import streamlit as st
 import openai
 import pyttsx3
-import base64
 from streamlit.components.v1 import html
 
 # Set OpenAI API Key
@@ -28,88 +27,160 @@ def generate_image(prompt):
     response = openai.Image.create(prompt=prompt, n=1, size="512x512")
     return response["data"][0]["url"]
 
-# Custom Speech Recorder with JavaScript
-def record_audio():
+# JavaScript for Speech Recording
+def record_audio_js():
     recorder_script = """
     <script>
-        const recordButton = document.getElementById("recordButton");
-        const stopButton = document.getElementById("stopButton");
-        const audioText = document.getElementById("audioText");
-
         let mediaRecorder;
         let audioChunks = [];
-
-        recordButton.onclick = async () => {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-
-            mediaRecorder.ondataavailable = (event) => {
-                audioChunks.push(event.data);
-            };
-
-            mediaRecorder.onstop = async () => {
-                const blob = new Blob(audioChunks, { type: "audio/webm" });
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const base64String = reader.result.split(",")[1];
-                    audioText.value = base64String;
-                };
-                reader.readAsDataURL(blob);
-            };
-
-            mediaRecorder.start();
+        const startRecording = () => {
+            navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
+                mediaRecorder.start();
+            });
         };
-
-        stopButton.onclick = () => {
+        const stopRecording = () => {
             mediaRecorder.stop();
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(audioChunks, { type: "audio/webm" });
+                const url = URL.createObjectURL(blob);
+                const audio = document.createElement("audio");
+                audio.src = url;
+                audio.controls = true;
+                document.body.appendChild(audio);
+            };
         };
+        window.startRecording = startRecording;
+        window.stopRecording = stopRecording;
     </script>
-
-    <div>
-        <button id="recordButton">🎙️ Start Recording</button>
-        <button id="stopButton">⏹️ Stop Recording</button>
-        <input type="hidden" id="audioText" name="audioText" value="">
-    </div>
     """
     return recorder_script
 
-# Streamlit UI
-st.set_page_config(page_title="AI Assistant", layout="wide")
+# Streamlit UI Configuration
+st.set_page_config(page_title="ChatGPT-like Assistant", layout="wide")
 
-# App Title
-st.title("AI Assistant with Text, Speech, and Image Generation")
-st.markdown("---")
+# Chat Style Layout
+st.markdown(
+    """
+    <style>
+    .chat-box { 
+        background: #f7f8fc; 
+        border-radius: 10px; 
+        padding: 10px; 
+        margin: 5px 0; 
+        width: fit-content; 
+    }
+    .user-box { 
+        background: #dcf8c6; 
+        border-radius: 10px; 
+        padding: 10px; 
+        margin: 5px 0; 
+        width: fit-content; 
+        align-self: flex-end;
+    }
+    .assistant-box { 
+        background: #eeeeee; 
+        border-radius: 10px; 
+        padding: 10px; 
+        margin: 5px 0; 
+        width: fit-content; 
+        align-self: flex-start;
+    }
+    .input-row {
+        display: flex; 
+        align-items: center; 
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .input-textbox {
+        flex: 1;
+        height: 50px;
+        border-radius: 25px;
+        padding: 10px;
+        border: 1px solid #ccc;
+    }
+    .send-button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        padding: 10px;
+        height: 50px;
+        width: 50px;
+        font-size: 18px;
+    }
+    .mic-button {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        padding: 10px;
+        height: 50px;
+        width: 50px;
+        font-size: 18px;
+    }
+    .sidebar-header {
+        font-size: 18px;
+        font-weight: bold;
+        margin-top: 20px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-# Sidebar
+# Sidebar Section
 with st.sidebar:
-    st.header("🎨 Generate AI Images")
-    image_prompt = st.text_input("Enter a prompt for an image:")
+    st.markdown("<div class='sidebar-header'>🎨 Generate Images</div>", unsafe_allow_html=True)
+    image_prompt = st.text_input("Enter image prompt:")
     if st.button("Generate Image"):
         if image_prompt:
             image_url = generate_image(image_prompt)
             st.image(image_url, caption="Generated Image", use_column_width=True)
         else:
-            st.warning("Please enter an image prompt.")
+            st.warning("Please enter a prompt!")
 
-# Chat Interface
-st.header("💬 Chat with AI")
-user_query = st.text_input("Enter your message:")
+# Chat Area
+st.markdown("<h2>💬 Chat with AI</h2>", unsafe_allow_html=True)
+
+# Session State to Store Chat History
+if "messages" not in st.session_state:
+    st.session_state["messages"] = [{"role": "assistant", "content": "Hello! How can I assist you today?"}]
+
+# Display Messages
+for message in st.session_state["messages"]:
+    if message["role"] == "user":
+        st.markdown(f"<div class='chat-box user-box'>{message['content']}</div>", unsafe_allow_html=True)
+    elif message["role"] == "assistant":
+        st.markdown(f"<div class='chat-box assistant-box'>{message['content']}</div>", unsafe_allow_html=True)
+
+# Input Row
+st.markdown(
+    """
+    <div class='input-row'>
+        <input id='text-input' class='input-textbox' type='text' placeholder='Type a message...' />
+        <button id='send-button' class='send-button'>⮞</button>
+        <button id='mic-button' class='mic-button'>🎙️</button>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# JavaScript Recorder
+html(record_audio_js(), height=0)
+
+# Text Input Handling
+input_query = st.text_input("Enter your message below:")
+
 if st.button("Send"):
-    if user_query:
-        with st.spinner("Generating response..."):
-            ai_response = generate_text_response(user_query)
-            st.write("**AI:**", ai_response)
-            if st.checkbox("🔊 Speak Response"):
-                speak_text(ai_response)
+    if input_query:
+        # Append user input
+        st.session_state["messages"].append({"role": "user", "content": input_query})
+        with st.spinner("AI is thinking..."):
+            response = generate_text_response(input_query)
+            # Append AI response
+            st.session_state["messages"].append({"role": "assistant", "content": response})
+            st.experimental_rerun()
     else:
-        st.warning("Please enter a message.")
-
-# Speech Input
-st.header("🎙️ Voice Input")
-st.markdown("Click the buttons below to record your voice.")
-html(record_audio(), height=150)
-
-# Footer
-st.markdown("---")
-st.markdown("Made with ❤️ by [Your Name]")
+        st.warning("Please enter a message!")
