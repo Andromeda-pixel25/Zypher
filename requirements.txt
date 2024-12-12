@@ -1,7 +1,5 @@
 streamlit
-transformers
-SpeechRecognition
 pyttsx3
 requests
-TensorFlow
-tf-keras
+streamlit-mic-recorder
+audio-recorder-streamlit
