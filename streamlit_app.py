@@ -5,7 +5,7 @@ import openai
 from streamlit.components.v1 import html
 
 # Set up Google Generative AI
-api_key = st.secrets["GOOGLE_API_KEY"]
+api_key = st.secrets["AIzaSyA7V6N800cWrvaW2hlgHazi62i4Gh-idZk"]
 genai.configure(api_key=api_key)
 model = genai.GenerativeModel("gemini-pro")
 
