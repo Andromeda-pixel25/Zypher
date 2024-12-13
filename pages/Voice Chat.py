@@ -6,6 +6,11 @@ import requests
 
 st.title("🎤 Voice-based Chat")
 
+audio_value = st.audio_input("Record a voice message")
+
+if audio_value:
+    st.audio(audio_value)
+    
 # Streamlit-webrtc for real-time voice input
 webrtc_ctx = webrtc_streamer(
     key="voice",
