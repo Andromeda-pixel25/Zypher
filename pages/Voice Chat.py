@@ -6,7 +6,7 @@ from langchain.llms import HuggingFaceHub
 from scipy.signal import resample
 
 # Set the title of the Streamlit app
-st.title("\U0001F3A4 Voice-based Chat")
+st.title("🎤 Voice-based Chat")
 
 # Record voice input using st.audio_input
 st.info("Click below to record your voice and interact with the chatbot.")
@@ -24,12 +24,12 @@ if voice_input is not None:
             audio_io = io.BytesIO(audio_bytes)
             audio_data, sample_rate = sf.read(audio_io)
 
-            # Resample if the sample rate is not 16 kHz
+            # Ensure the sample rate is 16 kHz for Whisper
             if sample_rate != 16000:
                 audio_data = resample(audio_data, int(len(audio_data) * (16000 / sample_rate)))
                 sample_rate = 16000  # Set to 16 kHz
 
-            # Save the audio data to a temporary file to send to Whisper
+            # Save the audio data to a temporary file
             temp_audio_file = "temp_audio.wav"
             sf.write(temp_audio_file, audio_data, sample_rate)
 
@@ -39,7 +39,7 @@ if voice_input is not None:
                 model_kwargs={"language": "en"}
             )
 
-            # Transcribe audio using LangChain
+            # Transcribe audio using Whisper
             transcription = whisper_model.predict(temp_audio_file)
             st.write(f"**Transcription:** {transcription}")
 
