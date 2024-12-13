@@ -23,13 +23,17 @@ if voice_input:
                 data=voice_input.getvalue(),
             )
 
+            # Debugging: Display the raw response
+            st.write("**Transcription API Raw Response:**")
+            st.json(transcription_response.json())
+
             if transcription_response.status_code == 200:
                 transcription_data = transcription_response.json()
 
                 # Ensure transcription_data is parsed correctly
                 transcription = "Could not transcribe audio."
-                if isinstance(transcription_data, dict):
-                    transcription = transcription_data.get("text", transcription)
+                if isinstance(transcription_data, dict) and "text" in transcription_data:
+                    transcription = transcription_data["text"]
                 elif isinstance(transcription_data, list) and len(transcription_data) > 0:
                     transcription = transcription_data[0].get("text", transcription)
 
@@ -43,7 +47,8 @@ if voice_input:
                 )
 
                 if chatbot_response.status_code == 200:
-                    ai_reply = chatbot_response.json().get("generated_text", "No response.")
+                    chatbot_data = chatbot_response.json()
+                    ai_reply = chatbot_data.get("generated_text", "No response.")
                     st.write(f"**Bot:** {ai_reply}")
 
                     # Generate Text-to-Speech for the chatbot response
