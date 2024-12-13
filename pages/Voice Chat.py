@@ -3,6 +3,7 @@ import soundfile as sf
 import io
 from langchain.chat_models import ChatOpenAI
 from langchain.llms import HuggingFaceHub
+from scipy.signal import resample
 
 # Set the title of the Streamlit app
 st.title("\U0001F3A4 Voice-based Chat")
