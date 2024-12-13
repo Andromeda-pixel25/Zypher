@@ -6,7 +6,6 @@ streamlit-webrtc
 requests
 gTTS
 transformers 
-torch==2.0.1+cu117  # or the latest stable version compatible with your CUDA
-torchvision==0.15.2+cu117  # or the latest stable version compatible with your CUDA
-torchaudio==2.0.2+cu117  # or the latest stable version compatible with your CUDA
-
+torch
+torchvision
+torchaudio
