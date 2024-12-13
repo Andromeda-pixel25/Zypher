@@ -28,10 +28,10 @@ if voice_input:
 
                 # Ensure transcription_data is parsed correctly
                 transcription = "Could not transcribe audio."
-                if isinstance(transcription_data, list) and len(transcription_data) > 0:
-                    transcription = transcription_data[0]["text"] if "text" in transcription_data[0] else transcription
-                elif isinstance(transcription_data, dict):
+                if isinstance(transcription_data, dict):
                     transcription = transcription_data.get("text", transcription)
+                elif isinstance(transcription_data, list) and len(transcription_data) > 0:
+                    transcription = transcription_data[0].get("text", transcription)
 
                 st.write(f"**Transcription:** {transcription}")
 
