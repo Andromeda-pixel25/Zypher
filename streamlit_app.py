@@ -1,97 +1,106 @@
-# Directory structure:
-# - main.py
-# - pages/
-#     - 1_Text_Response.py
-#     - 2_Voice_Response.py
-#     - 3_Image_Generation.py
-
-# Main app (main.py)
+# Main page (main.py)
 import streamlit as st
 
-st.set_page_config(page_title="AI Chatbot", layout="wide")
-st.title("Welcome to the AI Chatbot App")
+st.set_page_config(
+    page_title="Multi-Page Chatbot",
+    page_icon="🤖",
+    layout="wide",
+)
 
+st.title("Welcome to the Multi-Page Chatbot")
 st.markdown("""
-This app provides the following features:
-- **Text Response**: Chat with the AI using text input.
-- **Voice Response**: Speak to the AI and get responses.
-- **Image Generation**: Generate images based on your descriptions.
+### Available Features:
+1. **Text-based Chat**: Interact with a chatbot powered by Hugging Face API.
+2. **Voice-based Chat**: Speak to the chatbot and hear responses.
+3. **Image Generation**: Generate images using Hugging Face's DALL-E.
 
-Use the sidebar to navigate between pages.
+Use the navigation menu on the left to explore.
 """)
 
-# Page 1: Text Response (pages/1_Text_Response.py)
+# Page 1: Text-based Chat (pages/Text Chat.py)
 import streamlit as st
 import requests
 
-st.title("Text Response")
-st.markdown("""Chat with AI using text input.""")
+st.title("💬 Text-based Chat")
 
-# Hugging Face API for text generation
-API_URL = "https://api-inference.huggingface.co/models/gpt2"
-headers = {"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"}
+# Hugging Face API setup
+API_URL = "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill"
+HEADERS = {"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"}
 
 def query(payload):
-    response = requests.post(API_URL, headers=headers, json=payload)
+    response = requests.post(API_URL, headers=HEADERS, json=payload)
     return response.json()
 
-user_input = st.text_input("Ask a question:")
-if user_input:
-    with st.spinner("Generating response..."):
-        output = query({"inputs": user_input})
-        st.text_area("Response:", value=output["generated_text"], height=200)
+if "messages" not in st.session_state:
+    st.session_state["messages"] = []
 
-# Page 2: Voice Response (pages/2_Voice_Response.py)
+user_input = st.text_input("Ask me anything:", key="text_chat_input")
+if user_input:
+    st.session_state["messages"].append({"role": "user", "content": user_input})
+    response = query({"inputs": user_input})
+    bot_reply = response.get("generated_text", "I'm not sure how to respond to that.")
+    st.session_state["messages"].append({"role": "bot", "content": bot_reply})
+
+for message in st.session_state["messages"]:
+    if message["role"] == "user":
+        st.markdown(f"**You:** {message['content']}")
+    else:
+        st.markdown(f"**Bot:** {message['content']}")
+
+# Page 2: Voice-based Chat (pages/Voice Chat.py)
 import streamlit as st
 import sounddevice as sd
 import numpy as np
-import requests
-import tempfile
 import wave
+import requests
 
-st.title("Voice Response")
-st.markdown("""Speak to the AI and get responses.""")
+st.title("🎤 Voice-based Chat")
+
+# Recording settings
+fs = 44100  # Sample rate
+seconds = 5  # Duration of recording
 
 # Record audio
-fs = 44100
-st.warning("Press the button below to start recording.")
+if st.button("Record Voice"):
+    st.write("Recording...")
+    recording = sd.rec(int(seconds * fs), samplerate=fs, channels=2, dtype='int16')
+    sd.wait()  # Wait until recording is finished
 
-def record_audio(duration=5):
-    st.info("Recording... Speak now!")
-    audio = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
-    sd.wait()
-    return audio
+    # Save to WAV file
+    filename = "temp_audio.wav"
+    with wave.open(filename, "wb") as wf:
+        wf.setnchannels(2)
+        wf.setsampwidth(np.dtype('int16').itemsize)
+        wf.setframerate(fs)
+        wf.writeframes(recording.tobytes())
 
-if st.button("Record"):
-    audio_data = record_audio()
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
-        wavefile = wave.open(tmp_file.name, 'wb')
-        wavefile.setnchannels(1)
-        wavefile.setsampwidth(2)
-        wavefile.setframerate(fs)
-        wavefile.writeframes(audio_data)
-        wavefile.close()
-        st.success(f"Saved recording: {tmp_file.name}")
+    st.audio(filename, format="audio/wav")
+    
+    # Transcribe using Hugging Face Whisper model
+    response = requests.post(
+        "https://api-inference.huggingface.co/models/openai/whisper-base",
+        headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
+        files={"file": open(filename, "rb")},
+    )
+    transcription = response.json().get("text", "Could not transcribe audio.")
+    st.write(f"**Transcription:** {transcription}")
 
-# Transcribe audio and generate text response (optional)
-# Use Hugging Face API or any transcription service
-
-# Page 3: Image Generation (pages/3_Image_Generation.py)
+# Page 3: Image Generation (pages/Image Generation.py)
 import streamlit as st
 import requests
 
-st.title("Image Generation")
-st.markdown("""Generate images based on your description.""")
+st.title("🎨 Image Generation")
 
-API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-v1"
-headers = {"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"}
+prompt = st.text_input("Describe the image you want to generate:", key="image_gen_input")
+if prompt:
+    response = requests.post(
+        "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2",
+        headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
+        json={"inputs": prompt},
+    )
 
-def generate_image(prompt):
-    response = requests.post(API_URL, headers=headers, json={"inputs": prompt})
-    return response.content
-
-description = st.text_input("Enter a description for the image:")
-if description:
-    with st.spinner("Generating image..."):
-        image_data = generate_image(description)
-        st.image(image_data, caption=description)
+    if response.status_code == 200:
+        image_bytes = response.content
+        st.image(image_bytes, caption=prompt, use_column_width=True)
+    else:
+        st.error("Failed to generate image. Please try again.")
