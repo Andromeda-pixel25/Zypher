@@ -1,12 +1,7 @@
 import streamlit as st
-import torch
-from langchain.chains import LLMChain
-from langchain.llms import HuggingFaceHub
-from langchain.prompts import PromptTemplate
-import numpy as np
 import soundfile as sf
 import io
-from scipy.signal import resample
+from langchain.llms import HuggingFaceHub
 
 # Set the title of the Streamlit app
 st.title("\U0001F3A4 Voice-based Chat")
@@ -29,15 +24,14 @@ if voice_input is not None:
 
             # Resample if the sample rate is not 16 kHz
             if sample_rate != 16000:
-                num_samples = int(len(audio_data) * (16000 / sample_rate))
-                audio_data = resample(audio_data, num_samples)
+                audio_data = resample(audio_data, int(len(audio_data) * (16000 / sample_rate)))
                 sample_rate = 16000  # Set to 16 kHz
 
             # Save the audio data to a temporary file to send to Whisper
             temp_audio_file = "temp_audio.wav"
             sf.write(temp_audio_file, audio_data, sample_rate)
 
-            # Create a LangChain Whisper model for transcription
+            # Create a Whisper model instance for transcription
             whisper_model = HuggingFaceHub(
                 repo_id="openai/whisper-large",
                 model_kwargs={"language": "en"}
@@ -47,11 +41,11 @@ if voice_input is not None:
             transcription = whisper_model.predict(temp_audio_file)
             st.write(f"**Transcription:** {transcription}")
 
-            # Create a GPT-2 model for generating responses
-            gpt_model = HuggingFaceHub(repo_id="gpt2")
+            # Create a ChatGPT model instance for generating responses
+            chat_model = HuggingFaceHub(repo_id="gpt2")  # Or another suitable model
 
-            # Generate a response from the GPT-2 model
-            response = gpt_model.predict(transcription)
+            # Generate a response from the conversational model
+            response = chat_model.predict(transcription)
             st.write(f"**Bot:** {response}")
 
         except Exception as e:
