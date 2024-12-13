@@ -45,4 +45,12 @@ if voice_input is not None:
             # Generate a response from the GPT-2 model
             with torch.no_grad():
                 outputs = gpt_model.generate(inputs, max_length=50)
-            response_text = gpt_tokenizer.decode(outputs[0], skip_
+            response_text = gpt_tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+            # Display the response
+            st.write(f"**Bot:** {response_text}")
+
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
+else:
+    st.warning("No valid audio input detected. Please record your voice again.")
