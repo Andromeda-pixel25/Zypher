@@ -1,12 +1,11 @@
 import streamlit as st
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import numpy as np
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
-# Load the Qwen model and tokenizer
-model_name = "Qwen/Qwen2-Audio-7B-Instruct"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.float16, device_map="auto")
+# Load the GPT-2 model and tokenizer
+model_name = "gpt2"
+tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+model = GPT2LMHeadModel.from_pretrained(model_name)
 
 # Set the title of the Streamlit app
 st.title("\U0001F3A4 Voice-based Chat")
@@ -16,24 +15,22 @@ st.info("Click below to record your voice and interact with the chatbot.")
 voice_input = st.audio_input("Record your voice")
 
 # Ensure voice input is not empty
-if voice_input is not None:
+if voice_input:
     st.write("**Recorded Audio:**")
     st.audio(voice_input, format="audio/wav")
 
     if st.button("Transcribe & Get Response"):
         try:
-            # Get the raw audio data from the recorded audio
-            audio_bytes = voice_input.getvalue()
+            # Process the audio input (This is just a placeholder; you would use actual transcription)
+            # Here you would integrate your audio transcription service
+            transcription = "This is a sample transcription of the audio input."
 
-            # Convert audio bytes to numpy array (if needed)
-            audio_np = np.frombuffer(audio_bytes, dtype=np.float32)
-
-            # Process the audio input using the Qwen model
-            inputs = tokenizer(audio_np, return_tensors="pt", padding=True)
+            # Tokenize the transcription for the model
+            inputs = tokenizer.encode(transcription, return_tensors="pt")
 
             # Generate a response from the model
             with torch.no_grad():
-                outputs = model.generate(**inputs)
+                outputs = model.generate(inputs, max_length=50)
             response_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
             # Display the response
