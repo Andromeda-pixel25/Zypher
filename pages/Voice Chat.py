@@ -17,7 +17,7 @@ if st.button("Transcribe & Get Response"):
             response = requests.post(
                 "https://api-inference.huggingface.co/models/openai/whisper-base",
                 headers=headers,
-                data=audio_data,
+                data=audio_value,
             )
 
             if response.status_code == 200:
