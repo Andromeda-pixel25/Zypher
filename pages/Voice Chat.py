@@ -4,6 +4,7 @@ from transformers import WhisperForConditionalGeneration, WhisperProcessor, GPT2
 import numpy as np
 import soundfile as sf
 import io
+from scipy.signal import resample
 
 # Load the Whisper model and processor for transcription
 whisper_model_name = "openai/whisper-large"
@@ -34,28 +35,31 @@ if voice_input is not None:
             audio_io = io.BytesIO(audio_bytes)
             audio_data, sample_rate = sf.read(audio_io)
 
-            # Ensure the sample rate is correct for Whisper
+            # Resample if the sample rate is not 16 kHz
             if sample_rate != 16000:
-                st.error("Audio sample rate must be 16 kHz.")
-            else:
-                # Use the Whisper processor to transcribe the audio
-                audio_input = whisper_processor(audio_data, return_tensors="pt", sampling_rate=16000)
-                with torch.no_grad():
-                    generated_ids = whisper_model.generate(**audio_input)
-                transcription = whisper_processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+                # Calculate the number of samples for the new sample rate
+                num_samples = int(len(audio_data) * (16000 / sample_rate))
+                audio_data = resample(audio_data, num_samples)
+                sample_rate = 16000  # Set to 16 kHz
 
-                st.write(f"**Transcription:** {transcription}")
+            # Use the Whisper processor to transcribe the audio
+            audio_input = whisper_processor(audio_data, return_tensors="pt", sampling_rate=16000)
+            with torch.no_grad():
+                generated_ids = whisper_model.generate(**audio_input)
+            transcription = whisper_processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
 
-                # Tokenize the transcription for the GPT-2 model
-                inputs = gpt_tokenizer.encode(transcription, return_tensors="pt")
+            st.write(f"**Transcription:** {transcription}")
 
-                # Generate a response from the GPT-2 model
-                with torch.no_grad():
-                    outputs = gpt_model.generate(inputs, max_length=50)
-                response_text = gpt_tokenizer.decode(outputs[0], skip_special_tokens=True)
+            # Tokenize the transcription for the GPT-2 model
+            inputs = gpt_tokenizer.encode(transcription, return_tensors="pt")
 
-                # Display the response
-                st.write(f"**Bot:** {response_text}")
+            # Generate a response from the GPT-2 model
+            with torch.no_grad():
+                outputs = gpt_model.generate(inputs, max_length=50)
+            response_text = gpt_tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+            # Display the response
+            st.write(f"**Bot:** {response_text}")
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
