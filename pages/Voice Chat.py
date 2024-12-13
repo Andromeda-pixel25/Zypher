@@ -1,3 +1,4 @@
+# Page 2: Voice-based Chat (pages/Voice Chat.py)
 import streamlit as st
 import sounddevice as sd
 import numpy as np
@@ -33,7 +34,8 @@ if st.button("Record Voice"):
         files={"file": open(filename, "rb")},
     )
     try:
-        transcription = response.json().get("text", "Could not transcribe audio.")
+        response_data = response.json()
+        transcription = response_data.get("text", "Could not transcribe audio.")
     except ValueError:
         transcription = "Error: Invalid response from transcription API."
     st.write(f"**Transcription:** {transcription}")
