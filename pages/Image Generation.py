@@ -1,3 +1,4 @@
+# Page 3: Image Generation (pages/Image Generation.py)
 import streamlit as st
 import requests
 
