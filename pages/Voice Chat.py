@@ -7,9 +7,10 @@ st.title("\U0001F3A4 Voice-based Chat")
 st.info("Click below to record your voice and interact with the chatbot.")
 voice_input = st.audio_input("Record your voice")
 
-# Transcription and Chatbot Interaction
-if voice_input:
-    
+# Ensure voice input is not empty
+if voice_input and len(voice_input.getvalue()) > 0:
+    st.write("**Recorded Audio:**")
+    st.audio(voice_input, format="audio/wav")
 
     if st.button("Transcribe & Get Response"):
         try:
@@ -27,7 +28,7 @@ if voice_input:
 
                 # Handle transcription response
                 if isinstance(transcription_data, list):
-                    transcription = transcription_data[0]["text"] if transcription_data and "text" in transcription_data[0] else "Could not transcribe audio."
+                    transcription = transcription_data[0].get("text", "Could not transcribe audio.") if transcription_data else "Could not transcribe audio."
                 elif isinstance(transcription_data, dict):
                     transcription = transcription_data.get("text", "Could not transcribe audio.")
                 else:
@@ -64,3 +65,5 @@ if voice_input:
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
+else:
+    st.warning("No valid audio input detected. Please record your voice again.")
