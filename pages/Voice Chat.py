@@ -18,34 +18,34 @@ if st.button("Transcribe & Get Response"):
                 data=audio_value.read(),
             )
 
-            # if response.status_code == 200:
-            #     transcription = response.json().get("text", "Could not transcribe audio.")
-            #     st.write(f"**Transcription:** {transcription}")
+            if response.status_code == 200:
+                transcription = response.json().get("text", "Could not transcribe audio.")
+                st.write(f"**Transcription:** {transcription}")
 
-            #     # Get AI Response
-            #     chatbot_response = requests.post(
-            #         "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
-            #         headers=headers,
-            #         json={"inputs": transcription},
-            #     )
-            #     if chatbot_response.status_code == 200:
-            #         ai_reply = chatbot_response.json().get("generated_text", "No response.")
-            #         st.write(f"**Bot:** {ai_reply}")
-            #         # Text-to-Speech Response
-            #         st.info("Reading out the response...")
-            #         tts_response = requests.post(
-            #             "https://api-inference.huggingface.co/models/facebook/tts",
-            #             headers=headers,
-            #             json={"inputs": ai_reply},
-            #         )
-            #         if tts_response.status_code == 200:
-            #             st.audio(tts_response.content, format="audio/wav")
-            #         else:
-            #             st.error("Could not generate voice response.")
-            #     else:
-            #         st.error("Failed to get chatbot response.")
-            # else:
-            #     st.error("Failed to transcribe audio.")
+                # Get AI Response
+                chatbot_response = requests.post(
+                    "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
+                    headers=headers,
+                    json={"inputs": transcription},
+                )
+                if chatbot_response.status_code == 200:
+                    ai_reply = chatbot_response.json().get("generated_text", "No response.")
+                    st.write(f"**Bot:** {ai_reply}")
+                    # Text-to-Speech Response
+                    st.info("Reading out the response...")
+                    tts_response = requests.post(
+                        "https://api-inference.huggingface.co/models/facebook/tts",
+                        headers=headers,
+                        json={"inputs": ai_reply},
+                    )
+                    if tts_response.status_code == 200:
+                        st.audio(tts_response.content, format="audio/wav")
+                    else:
+                        st.error("Could not generate voice response.")
+                else:
+                    st.error("Failed to get chatbot response.")
+            else:
+                st.error("Failed to transcribe audio.")
 
 # # Streamlit-webrtc for real-time voice input
 # webrtc_ctx = webrtc_streamer(
