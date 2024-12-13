@@ -69,7 +69,7 @@ if voice_input:
 
                     # Generate Text-to-Speech for the chatbot response
                     tts_response = requests.post(
-                        "https://api-inference.huggingface.co/models/tts_models/en/ljspeech/glow-tts",
+                        "https://api-inference.huggingface.co/models/tts_models/en/ljspeech/tacotron2",
                         headers=headers,
                         json={"inputs": ai_reply},
                     )
