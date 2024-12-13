@@ -37,7 +37,6 @@ if voice_input:
                 # Ensure transcription_data is parsed correctly
                 transcription = "Could not transcribe audio."
                 
-                # Since we know the structure, we can directly access it
                 if isinstance(transcription_data, dict) and "text" in transcription_data:
                     transcription = transcription_data["text"]
                 
@@ -59,7 +58,6 @@ if voice_input:
                     st.write("**Chatbot Data Structure:**")
                     st.json(chatbot_data)
 
-                    # Check if the chatbot response is a dict or list
                     if isinstance(chatbot_data, dict):
                         ai_reply = chatbot_data.get("generated_text", "No response.")
                     elif isinstance(chatbot_data, list) and len(chatbot_data) > 0:
@@ -76,10 +74,14 @@ if voice_input:
                         json={"inputs": ai_reply},
                     )
 
+                    # Debugging: Show the raw TTS response
+                    st.write("**Text-to-Speech API Raw Response:**")
+                    st.json(tts_response.json())
+
                     if tts_response.status_code == 200:
                         st.audio(tts_response.content, format="audio/wav")
                     else:
-                        st.error("Could not generate voice response.")
+                        st.error(f"Could not generate voice response. Status Code: {tts_response.status_code}, Response: {tts_response.text}")
                 else:
                     st.error("Failed to get chatbot response.")
             else:
