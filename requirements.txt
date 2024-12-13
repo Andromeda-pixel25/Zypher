@@ -7,5 +7,4 @@ requests
 gTTS
 transformers>=4.30.0
 torch
-torchvision
-torchaudio
+soundfile
