@@ -1,14 +1,12 @@
 import streamlit as st
-import requests
-import numpy as np
 import torch
-from transformers import QwenForCausalLM, QwenTokenizer
-from io import BytesIO
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import numpy as np
 
 # Load the Qwen model and tokenizer
 model_name = "Qwen/Qwen2-Audio-7B-Instruct"
-tokenizer = QwenTokenizer.from_pretrained(model_name)
-model = QwenForCausalLM.from_pretrained(model_name, torch_dtype=torch.float16, device_map="auto")
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.float16, device_map="auto")
 
 # Set the title of the Streamlit app
 st.title("\U0001F3A4 Voice-based Chat")
@@ -40,9 +38,6 @@ if voice_input is not None:
 
             # Display the response
             st.write(f"**Bot:** {response_text}")
-
-            # Optionally: Implement Text-to-Speech (TTS) here if desired
-            # For TTS, you can use any compatible model or API
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
