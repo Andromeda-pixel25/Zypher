@@ -37,21 +37,10 @@ if voice_input:
                 # Ensure transcription_data is parsed correctly
                 transcription = "Could not transcribe audio."
                 
-                # Check if transcription_data is a dict or list and handle accordingly
+                # Since we know the structure, we can directly access it
                 if isinstance(transcription_data, dict) and "text" in transcription_data:
                     transcription = transcription_data["text"]
-                elif isinstance(transcription_data, list):
-                    # Check if the list is not empty
-                    if len(transcription_data) > 0:
-                        # If the first item in the list is a dictionary, try to get the text
-                        if isinstance(transcription_data[0], dict) and "text" in transcription_data[0]:
-                            transcription = transcription_data[0]["text"]
-                        else:
-                            # If the first item is not a dict, convert it to string
-                            transcription = str(transcription_data[0])  
-                    else:
-                        st.warning("Transcription data is an empty list.")
-
+                
                 st.write(f"**Transcription:** {transcription}")
 
                 # Send transcription to chatbot model
@@ -61,9 +50,23 @@ if voice_input:
                     json={"inputs": transcription},
                 )
 
+                # Debugging: Show the raw chatbot response
+                st.write("**Chatbot API Raw Response:**")
+                st.json(chatbot_response.json())
+
                 if chatbot_response.status_code == 200:
                     chatbot_data = chatbot_response.json()
-                    ai_reply = chatbot_data.get("generated_text", "No response.")
+                    st.write("**Chatbot Data Structure:**")
+                    st.json(chatbot_data)
+
+                    # Check if the chatbot response is a dict or list
+                    if isinstance(chatbot_data, dict):
+                        ai_reply = chatbot_data.get("generated_text", "No response.")
+                    elif isinstance(chatbot_data, list) and len(chatbot_data) > 0:
+                        ai_reply = chatbot_data[0].get("generated_text", "No response.")
+                    else:
+                        ai_reply = "Unexpected response structure."
+
                     st.write(f"**Bot:** {ai_reply}")
 
                     # Generate Text-to-Speech for the chatbot response
