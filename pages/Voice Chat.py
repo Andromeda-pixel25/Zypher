@@ -1,41 +1,97 @@
 # Page 2: Voice-based Chat (pages/Voice Chat.py)
 import streamlit as st
-import sounddevice as sd
-import numpy as np
-import wave
+import streamlit.components.v1 as components
 import requests
 
 st.title("🎤 Voice-based Chat")
 
-# Recording settings
-fs = 44100  # Sample rate
-seconds = 5  # Duration of recording
+# WebRTC-based microphone recording component
+MIC_COMPONENT = """
+<script>
+    const recordButton = document.createElement("button");
+    recordButton.innerText = "Start Recording";
+    recordButton.style.background = "#4CAF50";
+    recordButton.style.color = "white";
+    recordButton.style.border = "none";
+    recordButton.style.padding = "10px 20px";
+    recordButton.style.cursor = "pointer";
+    recordButton.style.margin = "10px 0";
 
-# Record audio
-if st.button("Record Voice"):
-    st.write("Recording...")
-    recording = sd.rec(int(seconds * fs), samplerate=fs, channels=2, dtype='int16')
-    sd.wait()  # Wait until recording is finished
+    const stopButton = document.createElement("button");
+    stopButton.innerText = "Stop Recording";
+    stopButton.style.background = "#f44336";
+    stopButton.style.color = "white";
+    stopButton.style.border = "none";
+    stopButton.style.padding = "10px 20px";
+    stopButton.style.cursor = "pointer";
+    stopButton.style.margin = "10px 0";
+    stopButton.disabled = true;
 
-    # Save to WAV file
-    filename = "temp_audio.wav"
-    with wave.open(filename, "wb") as wf:
-        wf.setnchannels(2)
-        wf.setsampwidth(np.dtype('int16').itemsize)
-        wf.setframerate(fs)
-        wf.writeframes(recording.tobytes())
+    const audioContainer = document.createElement("div");
 
-    st.audio(filename, format="audio/wav")
-    
-    # Transcribe using Hugging Face Whisper model
-    response = requests.post(
-        "https://api-inference.huggingface.co/models/openai/whisper-base",
-        headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
-        files={"file": open(filename, "rb")},
-    )
-    try:
-        response_data = response.json()
-        transcription = response_data.get("text", "Could not transcribe audio.")
-    except ValueError:
-        transcription = "Error: Invalid response from transcription API."
-    st.write(f"**Transcription:** {transcription}")
+    let mediaRecorder;
+    let audioChunks = [];
+
+    recordButton.onclick = async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            audioChunks = [];
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            audioContainer.innerHTML = "";
+            audioContainer.appendChild(audio);
+            audio.controls = true;
+            audio.play();
+
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = () => {
+                const base64Audio = reader.result.split(",")[1];
+                const audioInput = document.getElementById("audio_data");
+                audioInput.value = base64Audio;
+            };
+        };
+
+        mediaRecorder.start();
+        recordButton.disabled = true;
+        stopButton.disabled = false;
+    };
+
+    stopButton.onclick = () => {
+        mediaRecorder.stop();
+        recordButton.disabled = false;
+        stopButton.disabled = true;
+    };
+
+    document.body.appendChild(recordButton);
+    document.body.appendChild(stopButton);
+    document.body.appendChild(audioContainer);
+</script>
+<input type="hidden" id="audio_data" name="audio_data" />
+"""
+components.html(MIC_COMPONENT)
+
+# Transcription and response
+if st.button("Get Transcription and Response"):
+    audio_data = st.experimental_get_query_params().get("audio_data", [None])[0]
+    if audio_data:
+        response = requests.post(
+            "https://api-inference.huggingface.co/models/openai/whisper-base",
+            headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
+            data=audio_data,
+        )
+        try:
+            response_data = response.json()
+            transcription = response_data.get("text", "Could not transcribe audio.")
+        except ValueError:
+            transcription = "Error: Invalid response from transcription API."
+        st.write(f"**Transcription:** {transcription}")
+    else:
+        st.error("No audio data available.")
