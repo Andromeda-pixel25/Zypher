@@ -1,44 +1,70 @@
-# Main page (main.py)
+# Page 2: Voice-based Chat (pages/Voice Chat.py)
 import streamlit as st
-
-st.set_page_config(
-    page_title="Multi-Page Chatbot",
-    page_icon="🤖",
-    layout="wide",
-)
+from streamlit_webrtc import webrtc_streamer, WebRtcMode, ClientSettings
 import requests
+from gtts import gTTS
+import os
 
-st.title("Zypher Chat")
+st.title("🎤 Voice-based Chat")
 
-# Hugging Face API setup
-API_URL = "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill"
-HEADERS = {"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"}
+st.markdown("""
+### Instructions:
+1. **Click 'Start Recording'** to record your voice.
+2. Speak and then **stop recording**.
+3. Get the transcription and hear the chatbot's response.
+""")
 
-def query(payload):
-    response = requests.post(API_URL, headers=HEADERS, json=payload)
+# WebRTC Configuration
+RTC_CONFIGURATION = {
+    "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+}
+
+webrtc_ctx = webrtc_streamer(
+    key="voice-chat",
+    mode=WebRtcMode.SENDRECV,
+    client_settings=ClientSettings(
+        rtc_configuration=RTC_CONFIGURATION,
+        media_stream_constraints={"audio": True, "video": False},
+    )
+)
+
+if webrtc_ctx and webrtc_ctx.audio_receiver:
     try:
-        response_data = response.json()
-        if isinstance(response_data, list):
-            return response_data[0]  # Handle list response
-        return response_data  # Handle dictionary response
-    except ValueError:
-        return {"error": "Invalid JSON response from API."}
+        # Capture audio frames
+        audio_frames = webrtc_ctx.audio_receiver.get_frames()
+        if audio_frames:
+            st.success("Audio captured successfully. Transcribing...")
 
-if "messages" not in st.session_state:
-    st.session_state["messages"] = []
+            # Save captured audio
+            audio_file_path = "recorded_audio.wav"
+            with open(audio_file_path, "wb") as audio_file:
+                audio_file.write(audio_frames[0].to_ndarray().tobytes())
 
-user_input = st.text_input("Ask me anything:", key="text_chat_input")
-if user_input:
-    st.session_state["messages"].append({"role": "user", "content": user_input})
-    response = query({"inputs": user_input})
-    if isinstance(response, dict) and "generated_text" in response:
-        bot_reply = response["generated_text"]
-    else:
-        bot_reply = response.get("error", "I'm not sure how to respond to that.")
-    st.session_state["messages"].append({"role": "bot", "content": bot_reply})
+            # Transcribe using Hugging Face API
+            with open(audio_file_path, "rb") as f:
+                transcription_response = requests.post(
+                    "https://api-inference.huggingface.co/models/openai/whisper-base",
+                    headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
+                    files={"file": f}
+                )
+            transcription = transcription_response.json().get("text", "Could not transcribe audio.")
+            st.write(f"**Transcription:** {transcription}")
 
-for message in st.session_state["messages"]:
-    if message["role"] == "user":
-        st.markdown(f"**You:** {message['content']}")
-    else:
-        st.markdown(f"**Bot:** {message['content']}")
+            # Generate chatbot response
+            bot_response = requests.post(
+                "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
+                headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
+                json={"inputs": transcription}
+            ).json().get("generated_text", "I couldn't generate a response.")
+            st.write(f"**Bot Response:** {bot_response}")
+
+            # Convert response to speech
+            tts = gTTS(bot_response)
+            tts_audio_file = "response_audio.mp3"
+            tts.save(tts_audio_file)
+            st.audio(tts_audio_file, format="audio/mp3")
+
+    except Exception as e:
+        st.error(f"An error occurred while processing audio: {e}")
+else:
+    st.warning("WebRTC is not initialized. Ensure microphone access is granted.")
