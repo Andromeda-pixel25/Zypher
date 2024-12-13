@@ -1,99 +1,97 @@
+# Directory structure:
+# - main.py
+# - pages/
+#     - 1_Text_Response.py
+#     - 2_Voice_Response.py
+#     - 3_Image_Generation.py
+
+# Main app (main.py)
 import streamlit as st
-import os
+
+st.set_page_config(page_title="AI Chatbot", layout="wide")
+st.title("Welcome to the AI Chatbot App")
+
+st.markdown("""
+This app provides the following features:
+- **Text Response**: Chat with the AI using text input.
+- **Voice Response**: Speak to the AI and get responses.
+- **Image Generation**: Generate images based on your descriptions.
+
+Use the sidebar to navigate between pages.
+""")
+
+# Page 1: Text Response (pages/1_Text_Response.py)
+import streamlit as st
 import requests
-import pyttsx3
-from streamlit_mic_recorder import mic_recorder, speech_to_text
-from audio_recorder_streamlit import audio_recorder
 
-# Initialize pyttsx3 engine
-engine = pyttsx3.init()
+st.title("Text Response")
+st.markdown("""Chat with AI using text input.""")
 
-def speak(text):
-    engine.say(text)
-    engine.runAndWait()
+# Hugging Face API for text generation
+API_URL = "https://api-inference.huggingface.co/models/gpt2"
+headers = {"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"}
 
-def role_to_streamlit(role):
-    return "assistant" if role == "model" else role
+def query(payload):
+    response = requests.post(API_URL, headers=headers, json=payload)
+    return response.json()
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+user_input = st.text_input("Ask a question:")
+if user_input:
+    with st.spinner("Generating response..."):
+        output = query({"inputs": user_input})
+        st.text_area("Response:", value=output["generated_text"], height=200)
 
-def render_chat_history():
-    for message in st.session_state.messages:
-        role, text = message
-        with st.chat_message(role):
-            st.markdown(text)
+# Page 2: Voice Response (pages/2_Voice_Response.py)
+import streamlit as st
+import sounddevice as sd
+import numpy as np
+import requests
+import tempfile
+import wave
 
-def get_serverless_response(prompt):
-    url = "https://api-inference.huggingface.co/models/gpt2"
-    headers = {"Authorization": "Bearer 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"}
-    payload = {"inputs": prompt}
-    response = requests.post(url, headers=headers, json=payload)
-    return response.json()["generated_text"] if response.status_code == 200 else "Error: Unable to fetch response."
+st.title("Voice Response")
+st.markdown("""Speak to the AI and get responses.""")
 
-# Pages
-pages = ["Text Response", "Voice Recognition", "Image Generation"]
-st.sidebar.title("ZypherAi Navigation")
-selected_page = st.sidebar.radio("Go to", pages)
+# Record audio
+fs = 44100
+st.warning("Press the button below to start recording.")
 
-if selected_page == "Text Response":
-    st.title("ZypherAi - Text Response")
-    st.markdown("Powered by Serverless Inference API")
-    render_chat_history()
-    prompt_text = st.chat_input("Ask away...")
-    if prompt_text:
-        st.chat_message("user").markdown(prompt_text)
-        with st.spinner("Zypher is thinking..."):
-            response = get_serverless_response(prompt_text)
-            st.session_state.messages.append(("assistant", response))
-            with st.chat_message("assistant"):
-                st.markdown(response)
-            speak(response)
+def record_audio(duration=5):
+    st.info("Recording... Speak now!")
+    audio = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
+    sd.wait()
+    return audio
 
-elif selected_page == "Voice Recognition":
-    st.title("ZypherAi - Voice Recognition")
-    st.markdown("Talk to Zypher using your voice")
-    footer_container = st.container()
-    with footer_container:
-        audio_bytes = audio_recorder()
-    if audio_bytes:
-        with st.spinner("Transcribing..."):
-            webm_file_path = "temp_audio.mp3"
-            with open(webm_file_path, "wb") as f:
-                f.write(audio_bytes)
-            transcript = speech_to_text(webm_file_path)
-            if transcript:
-                st.chat_message("user").write(transcript)
-                with st.spinner("Zypher is thinking..."):
-                    response = get_serverless_response(transcript)
-                    st.session_state.messages.append(("assistant", response))
-                    with st.chat_message("assistant"):
-                        st.markdown(response)
-                    speak(response)
-                os.remove(webm_file_path)
-            else:
-                st.error("Could not transcribe the audio. Please try again.")
+if st.button("Record"):
+    audio_data = record_audio()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
+        wavefile = wave.open(tmp_file.name, 'wb')
+        wavefile.setnchannels(1)
+        wavefile.setsampwidth(2)
+        wavefile.setframerate(fs)
+        wavefile.writeframes(audio_data)
+        wavefile.close()
+        st.success(f"Saved recording: {tmp_file.name}")
 
-elif selected_page == "Image Generation":
-    st.title("ZypherAi - Image Generation")
-    st.markdown("Generate images from text prompts.")
-    user_prompt = st.text_input("Describe the image you want to generate:")
-    if st.button("Generate Image"):
-        with st.spinner("Zypher is creating your image..."):
-            try:
-                response = requests.post(
-                    "https://api-inference.huggingface.co/models/stable-diffusion-v1-4",
-                    headers={"Authorization": "Bearer YOUR_HUGGINGFACE_API_KEY"},
-                    json={"inputs": user_prompt}
-                )
-                image_url = response.json().get("generated_image_url", "")
-                if image_url:
-                    st.image(image_url, caption="Generated by Zypher")
-                else:
-                    st.error("Image generation failed: " + response.text)
-            except Exception as e:
-                st.error("Image generation failed: " + str(e))
+# Transcribe audio and generate text response (optional)
+# Use Hugging Face API or any transcription service
 
-st.sidebar.markdown("---")
-st.sidebar.text("ZypherAi")
-st.sidebar.text("Created by: [Your Name]")
+# Page 3: Image Generation (pages/3_Image_Generation.py)
+import streamlit as st
+import requests
+
+st.title("Image Generation")
+st.markdown("""Generate images based on your description.""")
+
+API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-v1"
+headers = {"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"}
+
+def generate_image(prompt):
+    response = requests.post(API_URL, headers=headers, json={"inputs": prompt})
+    return response.content
+
+description = st.text_input("Enter a description for the image:")
+if description:
+    with st.spinner("Generating image..."):
+        image_data = generate_image(description)
+        st.image(image_data, caption=description)
