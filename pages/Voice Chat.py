@@ -1,6 +1,7 @@
 import streamlit as st
 import soundfile as sf
 import io
+from langchain.chat_models import ChatOpenAI
 from langchain.llms import HuggingFaceHub
 
 # Set the title of the Streamlit app
@@ -42,7 +43,7 @@ if voice_input is not None:
             st.write(f"**Transcription:** {transcription}")
 
             # Create a ChatGPT model instance for generating responses
-            chat_model = HuggingFaceHub(repo_id="gpt2")  # Or another suitable model
+            chat_model = ChatOpenAI(model_name="gpt-3.5-turbo")
 
             # Generate a response from the conversational model
             response = chat_model.predict(transcription)
