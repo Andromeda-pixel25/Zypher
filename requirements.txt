@@ -2,3 +2,6 @@ streamlit
 sounddevice
 numpy
 requests
+streamlit-webrtc
+requests
+gTTS
