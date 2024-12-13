@@ -10,4 +10,4 @@ torch
 soundfile
 scipy
 langchain
-langchain[community]
+
