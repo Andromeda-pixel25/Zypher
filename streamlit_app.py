@@ -10,13 +10,17 @@ import requests
 
 st.title("Zypher Chat")
 
+# Hugging Face API setup
 API_URL = "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill"
 HEADERS = {"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"}
 
 def query(payload):
     response = requests.post(API_URL, headers=HEADERS, json=payload)
     try:
-        return response.json()
+        response_data = response.json()
+        if isinstance(response_data, list):
+            return response_data[0]  # Handle list response
+        return response_data  # Handle dictionary response
     except ValueError:
         return {"error": "Invalid JSON response from API."}
 
