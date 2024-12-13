@@ -2,10 +2,18 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import requests
+import base64
 
 st.title("🎤 Voice-based Chat")
 
-# WebRTC-based microphone recording component
+st.markdown("""
+### Steps to Use:
+1. Click **Start Recording** to record your voice.
+2. Click **Stop Recording** to end the recording.
+3. Submit your recording to get a transcription and response.
+""")
+
+# HTML and JavaScript for microphone recording
 MIC_COMPONENT = """
 <script>
     const recordButton = document.createElement("button");
@@ -43,19 +51,12 @@ MIC_COMPONENT = """
         mediaRecorder.onstop = async () => {
             const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
             audioChunks = [];
-            const audioUrl = URL.createObjectURL(audioBlob);
-            const audio = new Audio(audioUrl);
-            audioContainer.innerHTML = "";
-            audioContainer.appendChild(audio);
-            audio.controls = true;
-            audio.play();
-
             const reader = new FileReader();
             reader.readAsDataURL(audioBlob);
             reader.onloadend = () => {
-                const base64Audio = reader.result.split(",")[1];
-                const audioInput = document.getElementById("audio_data");
-                audioInput.value = base64Audio;
+                const audioBase64 = reader.result.split(",")[1];
+                const inputField = document.getElementById("audio_data");
+                inputField.value = audioBase64;
             };
         };
 
@@ -74,24 +75,35 @@ MIC_COMPONENT = """
     document.body.appendChild(stopButton);
     document.body.appendChild(audioContainer);
 </script>
-<input type="hidden" id="audio_data" name="audio_data" />
+<input type="hidden" id="audio_data" />
 """
 components.html(MIC_COMPONENT)
 
-# Transcription and response
+audio_data = st.text_input("Paste the recorded audio data (Base64) below after recording:", key="audio_input")
+
 if st.button("Get Transcription and Response"):
-    audio_data = st.experimental_get_query_params().get("audio_data", [None])[0]
     if audio_data:
-        response = requests.post(
-            "https://api-inference.huggingface.co/models/openai/whisper-base",
-            headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
-            data=audio_data,
-        )
         try:
-            response_data = response.json()
-            transcription = response_data.get("text", "Could not transcribe audio.")
-        except ValueError:
-            transcription = "Error: Invalid response from transcription API."
-        st.write(f"**Transcription:** {transcription}")
+            # Send the audio data for transcription
+            transcription_response = requests.post(
+                "https://api-inference.huggingface.co/models/openai/whisper-base",
+                headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
+                json={"inputs": base64.b64decode(audio_data)}
+            )
+
+            transcription = transcription_response.json().get("text", "Could not transcribe audio.")
+            st.write(f"**Transcription:** {transcription}")
+
+            # Generate a response
+            bot_response = requests.post(
+                "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
+                headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
+                json={"inputs": transcription}
+            ).json().get("generated_text", "I couldn't generate a response.")
+
+            st.write(f"**Bot Response:** {bot_response}")
+
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
     else:
         st.error("No audio data available.")
