@@ -1,9 +1,7 @@
 import streamlit as st
 import soundfile as sf
 import io
-from langchain.chat_models import ChatOpenAI
-from langchain.llms import HuggingFaceHub
-from scipy.signal import resample
+import requests
 
 # Set the title of the Streamlit app
 st.title("🎤 Voice-based Chat")
@@ -26,30 +24,43 @@ if voice_input is not None:
 
             # Ensure the sample rate is 16 kHz for Whisper
             if sample_rate != 16000:
-                audio_data = resample(audio_data, int(len(audio_data) * (16000 / sample_rate)))
-                sample_rate = 16000  # Set to 16 kHz
+                st.warning("The audio sample rate must be 16 kHz. Please record again.")
+            else:
+                # Save the audio data to a temporary file
+                temp_audio_file = "temp_audio.wav"
+                sf.write(temp_audio_file, audio_data, sample_rate)
 
-            # Save the audio data to a temporary file
-            temp_audio_file = "temp_audio.wav"
-            sf.write(temp_audio_file, audio_data, sample_rate)
+                # Transcribe audio using Hugging Face Whisper
+                headers = {
+                    "Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}",
+                }
+                with open(temp_audio_file, 'rb') as audio_file:
+                    transcription_response = requests.post(
+                        "https://api-inference.huggingface.co/models/openai/whisper-large",
+                        headers=headers,
+                        files={"file": audio_file},
+                    )
 
-            # Create a Whisper model instance for transcription
-            whisper_model = HuggingFaceHub(
-                repo_id="openai/whisper-large",
-                model_kwargs={"language": "en"}
-            )
+                if transcription_response.status_code == 200:
+                    transcription_data = transcription_response.json()
+                    transcription = transcription_data.get("text", "Could not transcribe audio.")
+                    st.write(f"**Transcription:** {transcription}")
 
-            # Transcribe audio using Whisper
-            transcription = whisper_model.predict(temp_audio_file)
-            st.write(f"**Transcription:** {transcription}")
+                    # Chatbot response
+                    chatbot_response = requests.post(
+                        "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
+                        headers=headers,
+                        json={"inputs": transcription},
+                    )
 
-            # Create a ChatGPT model instance for generating responses
-            chat_model = ChatOpenAI(model_name="gpt-3.5-turbo")
-
-            # Generate a response from the conversational model
-            response = chat_model.predict(transcription)
-            st.write(f"**Bot:** {response}")
-
+                    if chatbot_response.status_code == 200:
+                        chatbot_data = chatbot_response.json()
+                        ai_reply = chatbot_data.get("generated_text", "No response.")
+                        st.write(f"**Bot:** {ai_reply}")
+                    else:
+                        st.error("Failed to get chatbot response.")
+                else:
+                    st.error("Failed to transcribe audio.")
         except Exception as e:
             st.error(f"An error occurred: {e}")
 else:
