@@ -9,7 +9,8 @@ voice_input = st.audio_input("Record your voice")
 
 # Transcription and Chatbot Interaction
 if voice_input:
-   
+    
+
     if st.button("Transcribe & Get Response"):
         try:
             headers = {"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"}
@@ -23,8 +24,10 @@ if voice_input:
 
             if transcription_response.status_code == 200:
                 transcription_data = transcription_response.json()
-                if isinstance(transcription_data, list) and len(transcription_data) > 0:
-                    transcription = transcription_data[0].get("text", "Could not transcribe audio.")
+
+                # Handle transcription response
+                if isinstance(transcription_data, list):
+                    transcription = transcription_data[0]["text"] if transcription_data and "text" in transcription_data[0] else "Could not transcribe audio."
                 elif isinstance(transcription_data, dict):
                     transcription = transcription_data.get("text", "Could not transcribe audio.")
                 else:
