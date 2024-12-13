@@ -8,7 +8,7 @@ st.info("Click below to record your voice and interact with the chatbot.")
 voice_input = st.audio_input("Record your voice")
 
 # Ensure voice input is not empty
-if voice_input and len(voice_input.getvalue()) > 0:
+if voice_input:
     st.write("**Recorded Audio:**")
     st.audio(voice_input, format="audio/wav")
 
@@ -27,12 +27,11 @@ if voice_input and len(voice_input.getvalue()) > 0:
                 transcription_data = transcription_response.json()
 
                 # Handle transcription response
-                if isinstance(transcription_data, list):
-                    transcription = transcription_data[0].get("text", "Could not transcribe audio.") if transcription_data else "Could not transcribe audio."
+                transcription = "Could not transcribe audio."
+                if isinstance(transcription_data, list) and transcription_data:
+                    transcription = transcription_data[0].get("text", transcription)
                 elif isinstance(transcription_data, dict):
-                    transcription = transcription_data.get("text", "Could not transcribe audio.")
-                else:
-                    transcription = "Could not transcribe audio."
+                    transcription = transcription_data.get("text", transcription)
 
                 st.write(f"**Transcription:** {transcription}")
 
