@@ -35,7 +35,11 @@ if voice_input:
                 if isinstance(transcription_data, dict) and "text" in transcription_data:
                     transcription = transcription_data["text"]
                 elif isinstance(transcription_data, list) and len(transcription_data) > 0:
-                    transcription = transcription_data[0].get("text", transcription)
+                    # Check if the first element is a dictionary
+                    if isinstance(transcription_data[0], dict) and "text" in transcription_data[0]:
+                        transcription = transcription_data[0]["text"]
+                    else:
+                        transcription = str(transcription_data[0])  # Fallback in case of unexpected structure
 
                 st.write(f"**Transcription:** {transcription}")
 
