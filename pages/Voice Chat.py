@@ -24,7 +24,8 @@ if voice_input:
             )
 
             if transcription_response.status_code == 200:
-                transcription = transcription_response.json().get("text", "Could not transcribe audio.")
+                transcription_data = transcription_response.json()
+                transcription = transcription_data[0].get("text", "Could not transcribe audio.") if isinstance(transcription_data, list) else transcription_data.get("text", "Could not transcribe audio.")
                 st.write(f"**Transcription:** {transcription}")
 
                 # Send transcription to chatbot model
