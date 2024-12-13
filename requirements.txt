@@ -5,3 +5,6 @@ requests
 streamlit-webrtc
 requests
 gTTS
+transformers 
+torch 
+
