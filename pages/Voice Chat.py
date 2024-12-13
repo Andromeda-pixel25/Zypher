@@ -10,15 +10,15 @@ voice_input = st.audio_input("Record your voice")
 # Transcription and Chatbot Interaction
 if voice_input:
     if st.button("Transcribe & Get Response"):
-    try:
-        headers = {"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"}
-
-        # Send audio to Hugging Face Whisper API for transcription
-        transcription_response = requests.post(
-            "https://api-inference.huggingface.co/models/openai/whisper-base",
-            headers=headers,
-            data=voice_input.getvalue(),
-        )
+        try:
+            headers = {"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"}
+    
+            # Send audio to Hugging Face Whisper API for transcription
+            transcription_response = requests.post(
+                "https://api-inference.huggingface.co/models/openai/whisper-base",
+                headers=headers,
+                data=voice_input.getvalue(),
+            )
 
         if transcription_response.status_code == 200:
             transcription_data = transcription_response.json()
