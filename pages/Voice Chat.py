@@ -30,16 +30,27 @@ if voice_input:
             if transcription_response.status_code == 200:
                 transcription_data = transcription_response.json()
 
+                # Debugging: Show the structure of the transcription data
+                st.write("**Transcription Data Structure:**")
+                st.json(transcription_data)
+
                 # Ensure transcription_data is parsed correctly
                 transcription = "Could not transcribe audio."
+                
+                # Check if transcription_data is a dict or list and handle accordingly
                 if isinstance(transcription_data, dict) and "text" in transcription_data:
                     transcription = transcription_data["text"]
-                elif isinstance(transcription_data, list) and len(transcription_data) > 0:
-                    # Check if the first element is a dictionary
-                    if isinstance(transcription_data[0], dict) and "text" in transcription_data[0]:
-                        transcription = transcription_data[0]["text"]
+                elif isinstance(transcription_data, list):
+                    # Check if the list is not empty
+                    if len(transcription_data) > 0:
+                        # If the first item in the list is a dictionary, try to get the text
+                        if isinstance(transcription_data[0], dict) and "text" in transcription_data[0]:
+                            transcription = transcription_data[0]["text"]
+                        else:
+                            # If the first item is not a dict, convert it to string
+                            transcription = str(transcription_data[0])  
                     else:
-                        transcription = str(transcription_data[0])  # Fallback in case of unexpected structure
+                        st.warning("Transcription data is an empty list.")
 
                 st.write(f"**Transcription:** {transcription}")
 
