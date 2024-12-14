@@ -58,9 +58,9 @@ if voice_input is not None:
                         ai_reply = chatbot_data.get("generated_text", "No response.")
                         st.write(f"**Bot:** {ai_reply}")
                     else:
-                        st.error("Failed to get chatbot response.")
+                        st.error(f"Chatbot failed: {chatbot_response.text}")
                 else:
-                    st.error("Failed to transcribe audio.")
+                    st.error(f"Transcription failed: {transcription_response.text}")
         except Exception as e:
             st.error(f"An error occurred: {e}")
 else:
