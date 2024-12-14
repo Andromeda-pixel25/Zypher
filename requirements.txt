@@ -10,4 +10,6 @@ torch
 soundfile
 scipy
 langchain
+speechrecognition
+pydub
 
