@@ -3,7 +3,7 @@ import requests
 import numpy as np
 import io
 import soundfile as sf
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from scipy.signal import resample
 
 # Title
 st.title("🎤 Voice-to-Text Chatbot with 16kHz Audio")
@@ -16,10 +16,12 @@ CHATBOT_MODEL_API = "https://api-inference.huggingface.co/models/facebook/blende
 # Function to resample audio to 16kHz
 def resample_audio(audio_bytes):
     try:
+        # Read audio data
         data, samplerate = sf.read(io.BytesIO(audio_bytes))
         if samplerate != 16000:
             st.warning(f"Resampling audio from {samplerate} Hz to 16kHz...")
-            resampled_data = sf.resample(data, samplerate, 16000)
+            num_samples = int(len(data) * 16000 / samplerate)
+            resampled_data = resample(data, num_samples)
             audio_bytes_16khz = io.BytesIO()
             sf.write(audio_bytes_16khz, resampled_data, 16000, format="WAV")
             return audio_bytes_16khz.getvalue()
