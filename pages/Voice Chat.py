@@ -22,7 +22,7 @@ def process_audio(audio_bytes):
     try:
         # Read the audio data from bytes
         audio_data, original_samplerate = sf.read(io.BytesIO(audio_bytes))
-        
+
         # Ensure the audio is mono (single channel)
         if len(audio_data.shape) > 1:
             audio_data = np.mean(audio_data, axis=1)
@@ -37,6 +37,9 @@ def process_audio(audio_bytes):
             st.write("Audio resampled to 16 kHz.")
         else:
             st.write("Audio is already at 16 kHz.")
+
+        # Ensure the audio data is in the correct format
+        audio_data = audio_data.astype(np.float32)  # Ensure audio is float32
 
         # Save the processed audio as 16 kHz WAV
         output_audio = io.BytesIO()
