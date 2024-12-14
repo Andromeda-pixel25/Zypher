@@ -1,59 +1,84 @@
 import streamlit as st
-import soundfile as sf
-import io
 import requests
+import numpy as np
+import io
+import soundfile as sf
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-st.title("🎤 Voice-based Chat")
+# Title
+st.title("🎤 Voice-to-Text Chatbot with 16kHz Audio")
 
-# Record voice input
-voice_input = st.audio_input("Record your voice")
+# Initialize Hugging Face models
+HUGGINGFACE_API_TOKEN = st.secrets["HUGGINGFACE_API_TOKEN"]
+WHISPER_MODEL_API = "https://api-inference.huggingface.co/models/openai/whisper-large"
+CHATBOT_MODEL_API = "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill"
 
-if voice_input:
-    st.audio(voice_input, format="audio/wav")
-    if st.button("Transcribe & Chat"):
+# Function to resample audio to 16kHz
+def resample_audio(audio_bytes):
+    try:
+        data, samplerate = sf.read(io.BytesIO(audio_bytes))
+        if samplerate != 16000:
+            st.warning(f"Resampling audio from {samplerate} Hz to 16kHz...")
+            resampled_data = sf.resample(data, samplerate, 16000)
+            audio_bytes_16khz = io.BytesIO()
+            sf.write(audio_bytes_16khz, resampled_data, 16000, format="WAV")
+            return audio_bytes_16khz.getvalue()
+        return audio_bytes
+    except Exception as e:
+        st.error(f"Audio processing failed: {e}")
+        return None
+
+# Function to call Hugging Face API
+def call_huggingface_api(url, headers, files=None, data=None, json=None):
+    response = requests.post(url, headers=headers, files=files, data=data, json=json)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        st.error(f"API Error {response.status_code}: {response.text}")
+        return None
+
+# Record Audio Input
+st.info("Click below to record your voice and interact with the chatbot.")
+audio_input = st.audio_input("Record your voice")
+
+if audio_input:
+    st.write("**Recorded Audio:**")
+    st.audio(audio_input, format="audio/wav")
+
+    if st.button("Transcribe & Get Response"):
         try:
-            # Convert audio to 16kHz
-            audio_bytes = voice_input.getvalue()
-            audio_io = io.BytesIO(audio_bytes)
-            audio_data, sample_rate = sf.read(audio_io)
+            # Resample audio to 16kHz
+            st.info("Processing audio...")
+            audio_bytes_16khz = resample_audio(audio_input.getvalue())
+            if not audio_bytes_16khz:
+                st.error("Could not process the audio for transcription.")
+                st.stop()
 
-            if sample_rate != 16000:
-                st.error("Audio must be 16kHz. Please record again.")
-            else:
-                # Save to temporary file
-                temp_audio_file = "temp_audio.wav"
-                sf.write(temp_audio_file, audio_data, sample_rate)
+            # Call Whisper API for transcription
+            headers = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
+            transcription_response = call_huggingface_api(
+                WHISPER_MODEL_API,
+                headers,
+                files={"file": io.BytesIO(audio_bytes_16khz)},
+            )
 
-                # Transcription (Hugging Face Whisper)
-                headers = {"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"}
-                with open(temp_audio_file, 'rb') as audio_file:
-                    transcription_response = requests.post(
-                        "https://api-inference.huggingface.co/models/openai/whisper-large",
-                        headers=headers,
-                        files={"file": audio_file},
-                    )
+            if transcription_response:
+                transcription = transcription_response.get("text", "Transcription failed.")
+                st.write(f"**Transcription:** {transcription}")
 
-                if transcription_response.status_code == 200:
-                    transcription_data = transcription_response.json()
-                    transcription = transcription_data.get("text", "Transcription failed.")
-                    st.write(f"**Transcription:** {transcription}")
+                # Chatbot interaction
+                chatbot_response = call_huggingface_api(
+                    CHATBOT_MODEL_API,
+                    headers,
+                    json={"inputs": transcription},
+                )
 
-                    # Chatbot (Hugging Face BlenderBot)
-                    chatbot_response = requests.post(
-                        "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
-                        headers=headers,
-                        json={"inputs": transcription},
-                    )
-
-                    if chatbot_response.status_code == 200:
-                        chatbot_data = chatbot_response.json()
-                        ai_reply = chatbot_data.get("generated_text", "No response.")
-                        st.write(f"**Bot:** {ai_reply}")
-                    else:
-                        st.error(f"Chatbot failed: {chatbot_response.text}")
+                if chatbot_response:
+                    ai_reply = chatbot_response.get("generated_text", "No response.")
+                    st.write(f"**Bot:** {ai_reply}")
                 else:
-                    st.error(f"Transcription failed: {transcription_response.text}")
+                    st.error("Failed to get chatbot response.")
         except Exception as e:
             st.error(f"An error occurred: {e}")
 else:
-    st.warning("No audio input detected.")
+    st.warning("No valid audio input detected. Please record your voice again.")
