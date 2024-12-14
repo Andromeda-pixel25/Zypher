@@ -3,6 +3,7 @@ import streamlit as st
 import requests
 from PIL import Image
 import io
+import time
 
 st.title("🎨 Image Generation")
 
@@ -13,13 +14,26 @@ prompt = st.text_input("Describe the image you want to generate:")
 if st.button("Generate Image") and prompt:
     with st.spinner("Generating your image..."):
         try:
-            # API request to Hugging Face's DALL-E Mini model (alternative to stable diffusion)
+            model_url = "https://api-inference.huggingface.co/models/CompVis/stable-diffusion-v1-4"  # Alternative model
+
+            # API request to Hugging Face's stable diffusion model
             response = requests.post(
-                "https://api-inference.huggingface.co/models/dalle-mini/dalle-mini",
+                model_url,
                 headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
                 json={"inputs": prompt},
                 timeout=60  # Set a timeout to handle long generation times
             )
+
+            # Handle loading state for models
+            if response.status_code == 503:
+                st.warning("The model is currently loading. Retrying in 20 seconds...")
+                time.sleep(20)
+                response = requests.post(
+                    model_url,
+                    headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
+                    json={"inputs": prompt},
+                    timeout=60
+                )
 
             if response.status_code == 200:
                 # Convert the response content to an image
