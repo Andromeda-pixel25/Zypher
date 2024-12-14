@@ -2,8 +2,8 @@ import streamlit as st
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 import torch
 import numpy as np
-import soundfile as sf
 import io
+import soundfile as sf
 
 # Title
 st.title("🎤 Voice-to-Text Chatbot with Whisper")
@@ -20,9 +20,9 @@ processor, model = load_models()
 # Function to process audio
 def process_audio(audio_bytes):
     try:
-        # Read the audio data from bytes
+        # Read audio file
         audio_data, original_samplerate = sf.read(io.BytesIO(audio_bytes))
-
+        
         # Ensure the audio is mono (single channel)
         if len(audio_data.shape) > 1:
             audio_data = np.mean(audio_data, axis=1)
@@ -30,7 +30,7 @@ def process_audio(audio_bytes):
         # Check original sample rate
         st.write(f"Original Sample Rate: {original_samplerate} Hz")
 
-        # Resample if not 16 kHz
+        # Resample to 16 kHz if necessary
         if original_samplerate != 16000:
             num_samples = int(len(audio_data) * 16000 / original_samplerate)
             audio_data = np.interp(np.linspace(0, len(audio_data), num_samples), np.arange(len(audio_data)), audio_data)
@@ -39,7 +39,7 @@ def process_audio(audio_bytes):
             st.write("Audio is already at 16 kHz.")
 
         # Ensure the audio data is in the correct format
-        audio_data = audio_data.astype(np.float32)  # Ensure audio is float32
+        audio_data = audio_data.astype(np.float32)
 
         # Save the processed audio as 16 kHz WAV
         output_audio = io.BytesIO()
@@ -53,7 +53,7 @@ def process_audio(audio_bytes):
 # Transcription function
 def transcribe_audio(audio_bytes):
     try:
-        # Load the audio data and prepare it for the model
+        # Prepare audio for the model
         inputs = processor(audio_bytes, sampling_rate=16000, return_tensors="pt")
         st.write("Inputs for model:", inputs)  # Debugging line
         with torch.no_grad():
@@ -78,7 +78,7 @@ if audio_input:
 
     if st.button("Transcribe & Get Response"):
         st.info("Processing audio...")
-        
+
         # Process audio to ensure it's 16 kHz
         audio_bytes_16khz = process_audio(audio_input.getvalue())
         if not audio_bytes_16khz:
