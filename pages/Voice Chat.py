@@ -27,10 +27,16 @@ def process_audio(audio_bytes):
         if len(audio_data.shape) > 1:
             audio_data = np.mean(audio_data, axis=1)
 
+        # Check original sample rate
+        st.write(f"Original Sample Rate: {original_samplerate} Hz")
+
         # Resample if not 16 kHz
         if original_samplerate != 16000:
             num_samples = int(len(audio_data) * 16000 / original_samplerate)
             audio_data = np.interp(np.linspace(0, len(audio_data), num_samples), np.arange(len(audio_data)), audio_data)
+            st.write("Audio resampled to 16 kHz.")
+        else:
+            st.write("Audio is already at 16 kHz.")
 
         # Save the processed audio as 16 kHz WAV
         output_audio = io.BytesIO()
@@ -46,6 +52,7 @@ def transcribe_audio(audio_bytes):
     try:
         # Load the audio data and prepare it for the model
         inputs = processor(audio_bytes, sampling_rate=16000, return_tensors="pt")
+        st.write("Inputs for model:", inputs)  # Debugging line
         with torch.no_grad():
             predicted_ids = model.generate(inputs["input_features"])
         transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
