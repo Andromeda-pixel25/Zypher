@@ -4,6 +4,7 @@ import numpy as np
 import io
 import soundfile as sf
 from scipy.signal import resample
+import time
 
 # Title
 st.title("🎤 Voice-to-Text Chatbot with 16kHz Audio")
@@ -30,14 +31,20 @@ def resample_audio(audio_bytes):
         st.error(f"Audio processing failed: {e}")
         return None
 
-# Function to call Hugging Face API
-def call_huggingface_api(url, headers, files=None, data=None, json=None):
-    response = requests.post(url, headers=headers, files=files, data=data, json=json)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        st.error(f"API Error {response.status_code}: {response.text}")
-        return None
+# Function to call Hugging Face API with retry logic
+def call_huggingface_api(url, headers, files=None, data=None, json=None, retries=3, delay=10):
+    for attempt in range(retries):
+        response = requests.post(url, headers=headers, files=files, data=data, json=json)
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 503:
+            st.warning(f"Model is loading. Retrying in {delay} seconds... (Attempt {attempt + 1}/{retries})")
+            time.sleep(delay)
+        else:
+            st.error(f"API Error {response.status_code}: {response.text}")
+            return None
+    st.error("Model is unavailable after multiple retries. Please try again later.")
+    return None
 
 # Record Audio Input
 st.info("Click below to record your voice and interact with the chatbot.")
@@ -56,7 +63,7 @@ if audio_input:
                 st.error("Could not process the audio for transcription.")
                 st.stop()
 
-            # Call Whisper API for transcription
+            # Call Whisper API for transcription with retry logic
             headers = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
             transcription_response = call_huggingface_api(
                 WHISPER_MODEL_API,
