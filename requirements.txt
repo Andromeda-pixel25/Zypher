@@ -12,4 +12,4 @@ scipy
 langchain
 speechrecognition
 pydub
-
+pyaudio
