@@ -55,11 +55,11 @@ def transcribe_audio(audio_data):
 
 # Record audio input
 st.info("Click below to record your voice and interact with the chatbot.")
-audio_input = st.audio_input("Record your voice", format="audio/wav")
+audio_input = st.audio_input("Record your voice")
 
 if audio_input:
     st.write("**Recorded Audio:**")
-    st.audio(audio_input, format="audio/wav")
+    st.audio(audio_input)  # Removed format argument
 
     if st.button("Transcribe & Get Response"):
         st.info("Processing audio...")
