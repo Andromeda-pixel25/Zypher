@@ -10,7 +10,7 @@ st.title("🎤 Voice-to-Text Chatbot with 16kHz Audio")
 
 # Initialize Hugging Face models
 HUGGINGFACE_API_TOKEN = st.secrets["HUGGINGFACE_API_TOKEN"]
-WHISPER_MODEL_API = "https://api-inference.huggingface.co/models/openai/whisper-large"
+WHISPER_MODEL_API = "https://api-inference.huggingface.co/models/openai/whisper-small"
 CHATBOT_MODEL_API = "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill"
 
 # Function to resample audio to 16kHz
