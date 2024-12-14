@@ -43,8 +43,8 @@ def process_audio(audio_bytes):
 # Transcription function
 def transcribe_audio(audio_data):
     try:
-        # Prepare audio for the model
-        inputs = processor(audio_data, sampling_rate=16000, return_tensors="pt")
+        # Prepare audio for the model, specifying language='en' for English
+        inputs = processor(audio_data, sampling_rate=16000, return_tensors="pt", language="en")
         with torch.no_grad():
             predicted_ids = model.generate(inputs["input_features"])
         transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
@@ -59,7 +59,7 @@ audio_input = st.audio_input("Record your voice")
 
 if audio_input:
     st.write("**Recorded Audio:**")
-    st.audio(audio_input)  # Removed format argument
+    st.audio(audio_input)  # Playback of the recorded audio
 
     if st.button("Transcribe & Get Response"):
         st.info("Processing audio...")
