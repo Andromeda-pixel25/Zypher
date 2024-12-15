@@ -13,7 +13,7 @@ st.set_page_config(
 
 # Add a logo to the sidebar
 st.sidebar.image(
-    "https://via.placeholder.com/150",  # Replace with your logo URL
+    "letter-z (1).png",  # Replace with your logo URL
     caption="Zypher AI",
     use_column_width=True
 )
