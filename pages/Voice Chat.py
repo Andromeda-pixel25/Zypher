@@ -90,7 +90,7 @@ if audio_input:
         st.info("Transcribing audio...")
         transcription = transcribe_audio(audio_data)
         if transcription:
-            st.write(f"**Transcription:** {transcription}")
+            st.write(f"**You:** {transcription}")
 
             # Append user input to chat history
             st.session_state.chat_history.append(f"You: {transcription}")
@@ -99,10 +99,12 @@ if audio_input:
             st.info("Generating response from chatbot...")
             chatbot_response = get_chatbot_response(transcription)
             if chatbot_response:
-                st.write(f"**Chatbot Response:** {chatbot_response}")
+                # Format chatbot response for user assistant style
+                formatted_response = f"**Assistant:** {chatbot_response}"
+                st.write(formatted_response)
 
                 # Append chatbot response to chat history
-                st.session_state.chat_history.append(f"Chatbot: {chatbot_response}")
+                st.session_state.chat_history.append(f"Assistant: {chatbot_response}")
 
             else:
                 st.error("Failed to get chatbot response.")
