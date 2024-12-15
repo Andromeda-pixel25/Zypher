@@ -6,7 +6,13 @@ import io
 import time
 
 st.title("🎨 Zypher Image Generation")
+st.logo(
+    "letter-z (1).png",
+    size="large"
+)
 
+st.markdown("_________________________________________________________________________________")
+st.write("Powered by Whispher Ai")
 # Prompt input for the user
 prompt = st.text_input("Describe the image you want to generate:")
 
