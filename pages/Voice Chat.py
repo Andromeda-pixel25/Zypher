@@ -27,7 +27,7 @@ def load_chatbot_model():
 # Load TTS model
 @st.cache_resource
 def load_tts_model():
-    return pipeline("text-to-speech", model="tts_models/en/ljspeech/fastspeech2")
+    return pipeline("text-to-speech", model="espnet/kan-bayashi_ljspeech_vits")
 
 whisper_processor, whisper_model = load_whisper_models()
 chatbot_tokenizer, chatbot_model = load_chatbot_model()
