@@ -91,20 +91,20 @@ if audio_input:
         transcription = transcribe_audio(audio_data)
         if transcription:
             # Append user input to conversation
-            st.session_state.conversation.append(f"You: {transcription}")
+            st.session_state.conversation.append({"role": "user", "content": transcription})
 
-            # Display user input
-            st.write(f"You: {transcription}")
+            # Display user input using st.chat_message
+            st.chat_message("user").markdown(transcription)
 
             # Get response from the chatbot
             st.info("Generating response from chatbot...")
             chatbot_response = get_chatbot_response(transcription)
             if chatbot_response:
                 # Append chatbot response to conversation
-                st.session_state.conversation.append(f"Assistant: {chatbot_response}")
+                st.session_state.conversation.append({"role": "assistant", "content": chatbot_response})
 
-                # Display chatbot response
-                st.write(f"Assistant: {chatbot_response}")
+                # Display chatbot response using st.chat_message
+                st.chat_message("assistant").markdown(chatbot_response)
             else:
                 st.error("Failed to get chatbot response.")
         else:
@@ -116,4 +116,4 @@ else:
 if st.session_state.conversation:
     st.write("### Conversation Content:")
     for message in st.session_state.conversation:
-        st.write(message)
+        st.chat_message(message["role"]).markdown(message["content"])
