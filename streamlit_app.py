@@ -50,7 +50,7 @@ if page == "Text Response":
 
                 if response.status_code == 200:
                     # Parse and display the model's response
-                    output = response.json().get("generated_text", "Sorry, I couldn't generate a response.")
+                    output = response.json()[0]["generated_text"]  # Adjusted to access the first element of the list
                     st.chat_message("assistant").write(output)
                     st.session_state.chat_history.append(("assistant", output))
                 elif response.status_code == 503:
