@@ -18,6 +18,9 @@ st.set_page_config(
 
 st.title("📝 Zypher Text Response")
     
+# Initialize session state for chat history
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
 # Text input using st.chat_input
 prompt = st.chat_input("Ask Zypher AI anything:")
@@ -25,8 +28,8 @@ prompt = st.chat_input("Ask Zypher AI anything:")
 model_url = "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill"
 
 if prompt:
-    # Display the user's input in the chat history
-    st.chat_message("user").write(prompt)
+    # Add the user's input to chat history
+    st.session_state.chat_history.append({"role": "user", "content": prompt})
 
     with st.spinner("Thinking..."):
         try:
@@ -42,7 +45,7 @@ if prompt:
                     # Successful response
                     result = response.json()
                     output = result["generated_text"] if isinstance(result, dict) else result[0].get("generated_text", "No response text found.")
-                    st.chat_message("assistant").write(output)
+                    st.session_state.chat_history.append({"role": "assistant", "content": output})
                     break
                 elif response.status_code == 503:
                     # Model is loading; retry after estimated time
@@ -55,6 +58,13 @@ if prompt:
                     break
         except requests.exceptions.RequestException as e:
             st.error(f"An error occurred: {e}")
+
+# Display the chat history
+for message in st.session_state.chat_history:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
+
+
 
 
 
