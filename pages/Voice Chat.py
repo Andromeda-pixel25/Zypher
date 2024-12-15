@@ -6,9 +6,15 @@ import numpy as np
 import soundfile as sf
 import io
 
-# Title
-st.title("🎤 Zypher Voice-to-Text Chatbot with Whisper")
+st.logo(
+    "letter-z (1).png",
+    size="large"
+)
 
+# Title
+st.title("🎤 Zypher Voice Chatbot")
+st.markdown("_________________________________________________________________________________")
+st.write("Powered by Whispher Ai")
 # Load Whisper model and processor
 @st.cache_resource
 def load_whisper_models():
