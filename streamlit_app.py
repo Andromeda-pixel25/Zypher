@@ -11,7 +11,7 @@ st.logo(
 # Configure Streamlit page
 st.set_page_config(
     page_title="Zypher AI",
-    page_icon="🤖",
+    page_icon="letter-z (1).png",
     layout="wide",
     initial_sidebar_state="expanded",
 )
