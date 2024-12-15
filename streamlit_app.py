@@ -4,9 +4,8 @@ import requests
 import time
 
 st.logo(
-    LOGO_URL_LARGE,
-    link="letter-z (1).png",
-    icon_image=LOGO_URL_SMALL,
+    letter-z (1).png,
+    medium
 )
 
 # Configure Streamlit page
