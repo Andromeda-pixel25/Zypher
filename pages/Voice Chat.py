@@ -7,7 +7,7 @@ import soundfile as sf
 import io
 
 # Title
-st.title("🎤 Voice-to-Text Chatbot with Whisper")
+st.title("🎤 Zypher Voice-to-Text Chatbot with Whisper")
 
 # Load Whisper model and processor
 @st.cache_resource
