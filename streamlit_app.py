@@ -42,6 +42,8 @@ if prompt:
                 if response.status_code == 200:
                     # Successful response
                     output = response.json()["generated_text"]
+                    st.write(response.json())
+
                     st.chat_message("assistant").write(output)
                     break
                 elif response.status_code == 503:
