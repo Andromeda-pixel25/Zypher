@@ -11,11 +11,13 @@ st.logo(
 # Configure Streamlit page
 st.set_page_config(
     page_title="Zypher AI",
-    page_icon="🤖",
+    page_icon="letter-z (1).png",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
+st.title("📝 Zypher Text Response")
+    
 
 # Text input using st.chat_input
 prompt = st.chat_input("Ask Zypher AI anything:")
@@ -23,6 +25,9 @@ prompt = st.chat_input("Ask Zypher AI anything:")
 model_url = "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill"
 
 if prompt:
+    # Display the user's input in the chat history
+    st.chat_message("user").write(prompt)
+
     with st.spinner("Thinking..."):
         try:
             while True:  # Retry loop
@@ -50,6 +55,8 @@ if prompt:
                     break
         except requests.exceptions.RequestException as e:
             st.error(f"An error occurred: {e}")
+
+
 
 
 
