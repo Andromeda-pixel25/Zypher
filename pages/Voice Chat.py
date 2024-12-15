@@ -67,9 +67,9 @@ def get_chatbot_response(user_input):
         st.error(f"Chatbot response generation failed: {e}")
         return None
 
-# Initialize session state for chat history
-if 'chat_history' not in st.session_state:
-    st.session_state.chat_history = []
+# Initialize session state for conversation content
+if 'conversation' not in st.session_state:
+    st.session_state.conversation = []
 
 # Record audio input
 st.info("Click below to record your voice and interact with the chatbot.")
@@ -90,22 +90,21 @@ if audio_input:
         st.info("Transcribing audio...")
         transcription = transcribe_audio(audio_data)
         if transcription:
-            st.write(f"**You:** {transcription}")
+            # Append user input to conversation
+            st.session_state.conversation.append(f"You: {transcription}")
 
-            # Append user input to chat history
-            st.session_state.chat_history.append(f"You: {transcription}")
+            # Display user input
+            st.write(f"You: {transcription}")
 
             # Get response from the chatbot
             st.info("Generating response from chatbot...")
             chatbot_response = get_chatbot_response(transcription)
             if chatbot_response:
-                # Format chatbot response for user assistant style
-                formatted_response = f"**Assistant:** {chatbot_response}"
-                st.write(formatted_response)
+                # Append chatbot response to conversation
+                st.session_state.conversation.append(f"Assistant: {chatbot_response}")
 
-                # Append chatbot response to chat history
-                st.session_state.chat_history.append(f"Assistant: {chatbot_response}")
-
+                # Display chatbot response
+                st.write(f"Assistant: {chatbot_response}")
             else:
                 st.error("Failed to get chatbot response.")
         else:
@@ -113,8 +112,8 @@ if audio_input:
 else:
     st.warning("No valid audio input detected. Please record your voice again.")
 
-# Display chat history
-if st.session_state.chat_history:
-    st.write("### Chat History:")
-    for message in st.session_state.chat_history:
+# Display the conversation content without headers
+if st.session_state.conversation:
+    st.write("### Conversation Content:")
+    for message in st.session_state.conversation:
         st.write(message)
