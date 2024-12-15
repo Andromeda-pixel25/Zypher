@@ -116,4 +116,6 @@ else:
 if st.session_state.conversation:
     st.write("### Conversation Content:")
     for message in st.session_state.conversation:
-        st.chat_message(message["role"]).markdown(message["content"])
+        role = message["role"]
+        content = message["content"]
+        st.chat_message(role).markdown(content)
