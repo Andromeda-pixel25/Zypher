@@ -7,10 +7,6 @@ st.logo(
     "letter-z (1).png",
     size="large"
 )
-# Zypher AI: Multipage App with Sidebar
-import streamlit as st
-import requests
-import time
 
 # Configure Streamlit page
 st.set_page_config(
@@ -20,8 +16,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
-st.title("📝 Text Response")
 
 # Text input using st.chat_input
 prompt = st.chat_input("Ask Zypher AI anything:")
@@ -41,9 +35,8 @@ if prompt:
 
                 if response.status_code == 200:
                     # Successful response
-                    output = response.json()["generated_text"]
-                    st.write(response.json())
-
+                    result = response.json()
+                    output = result["generated_text"] if isinstance(result, dict) else result[0].get("generated_text", "No response text found.")
                     st.chat_message("assistant").write(output)
                     break
                 elif response.status_code == 503:
@@ -57,5 +50,7 @@ if prompt:
                     break
         except requests.exceptions.RequestException as e:
             st.error(f"An error occurred: {e}")
+
+
 
 
