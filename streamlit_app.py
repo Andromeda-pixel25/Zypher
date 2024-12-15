@@ -4,7 +4,7 @@ import requests
 import time
 
 st.logo(
-    letter-z (1).png,
+    "letter-z (1).png",
     medium
 )
 
