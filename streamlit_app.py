@@ -4,7 +4,8 @@ import requests
 import time
 
 st.logo(
-    "letter-z (1).png"
+    "letter-z (1).png",
+    size="large"
 )
 
 # Configure Streamlit page
@@ -14,14 +15,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-# Add a logo to the sidebar
-st.sidebar.image(
-    "letter-z (1).png",  # Replace with your logo URL
-    caption="Zypher AI",
-    use_column_width=True
-)
-
 
 st.title("📝 Zypher Text Response")
 
