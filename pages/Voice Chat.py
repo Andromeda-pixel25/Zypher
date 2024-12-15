@@ -1,5 +1,5 @@
 import streamlit as st
-from transformers import WhisperProcessor, WhisperForConditionalGeneration
+from transformers.models.whisper import WhisperProcessor, WhisperForConditionalGeneration
 from transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
 import torch
 import numpy as np
