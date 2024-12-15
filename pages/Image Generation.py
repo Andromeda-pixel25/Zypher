@@ -5,7 +5,7 @@ from PIL import Image
 import io
 import time
 
-st.title("🎨 Image Generation")
+st.title("🎨 Zypher Image Generation")
 
 # Prompt input for the user
 prompt = st.text_input("Describe the image you want to generate:")
