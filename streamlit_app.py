@@ -1,87 +1,49 @@
+# Zypher AI: Multipage App with Sidebar
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, WebRtcMode
 import requests
-import wave
-import pyaudio
 
-st.title("🎤 Voice-based Chat")
-
-# WebRTC for real-time audio input
-webrtc_ctx = webrtc_streamer(
-    key="voice",
-    mode=WebRtcMode.SENDRECV,
-    rtc_configuration={
-        "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
-    },
-    media_stream_constraints={"audio": True, "video": False},
+# Configure Streamlit page
+st.set_page_config(
+    page_title="Zypher AI",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
 
-# Recording and Transcription
-if "recording" not in st.session_state:
-    st.session_state["recording"] = False
+# Sidebar Navigation
+st.sidebar.title("Zypher AI Navigation")
+page = st.sidebar.radio("Go to:", ["Text Response", "Voice Interaction", "Image Generation"])
 
-if webrtc_ctx.audio_receiver:
-    audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
-    if audio_frames:
-        if not st.session_state["recording"]:
-            st.session_state["recording"] = True
-            st.info("Recording... Speak now!")
+if page == "Text Response":
+    st.title("📝 Text Response")
 
-        # Save audio to file
-        with wave.open("output.wav", "wb") as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(pyaudio.PyAudio().get_sample_size(pyaudio.paInt16))
-            wf.setframerate(44100)
-            for audio_frame in audio_frames:
-                wf.writeframes(audio_frame.to_ndarray().tobytes())
+    # Input for the user's text prompt
+    prompt = st.text_input("Ask Zypher AI anything:")
 
-        # Transcription and Response
-        if st.button("Transcribe & Get Response"):
-            with open("output.wav", "rb") as audio_file:
-                audio_data = audio_file.read()
-
-            # Transcription
-            transcription_response = requests.post(
-                "https://api-inference.huggingface.co/models/openai/whisper-base",
-                headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
-                data=audio_data,
-            )
-
+    # Button to send the prompt
+    if st.button("Get Response") and prompt:
+        with st.spinner("Thinking..."):
             try:
-                transcription_data = transcription_response.json()
-                if isinstance(transcription_data, list):
-                    transcription = transcription_data[0].get("text", "Could not transcribe audio.")
+                # Sending the prompt to Hugging Face Inference API
+                model_url = "https://api-inference.huggingface.co/models/facebook/opt-350m"  # Lightweight model
+                response = requests.post(
+                    model_url,
+                    headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
+                    json={"inputs": prompt},
+                    timeout=60  # Set timeout to handle response delays
+                )
+
+                if response.status_code == 200:
+                    # Parse and display the model's response
+                    output = response.json()["generated_text"]
+                    st.success("Response:")
+                    st.write(output)
+                elif response.status_code == 503:
+                    st.warning("The model is loading. Please try again after a few seconds.")
                 else:
-                    transcription = transcription_data.get("text", "Could not transcribe audio.")
-                st.write(f"**Transcription:** {transcription}")
-            except ValueError:
-                st.error("Failed to process transcription response.")
+                    st.error(f"Failed to fetch response. Error {response.status_code}: {response.text}")
+            except requests.exceptions.RequestException as e:
+                st.error(f"An error occurred: {e}")
+    else:
+        st.write("Enter a question above and click 'Get Response' to chat with Zypher AI!")
 
-            # Chatbot Response
-            chatbot_response = requests.post(
-                "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
-                headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
-                json={"inputs": transcription},
-            )
-
-            try:
-                chatbot_data = chatbot_response.json()
-                if isinstance(chatbot_data, list):
-                    bot_reply = chatbot_data[0].get("generated_text", "No response.")
-                else:
-                    bot_reply = chatbot_data.get("generated_text", "No response.")
-                st.write(f"**Bot:** {bot_reply}")
-            except ValueError:
-                st.error("Failed to process chatbot response.")
-
-            # Text-to-Speech Response
-            tts_response = requests.post(
-                "https://api-inference.huggingface.co/models/facebook/tts",
-                headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
-                json={"inputs": bot_reply},
-            )
-
-            if tts_response.status_code == 200:
-                st.audio(tts_response.content, format="audio/wav")
-            else:
-                st.error("Failed to generate voice output.")
