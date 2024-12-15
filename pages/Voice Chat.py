@@ -1,15 +1,10 @@
 import streamlit as st
-from transformers.models.whisper import WhisperProcessor, WhisperForConditionalGeneration
+from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
 import torch
 import numpy as np
 import soundfile as sf
 import io
-
-st.logo(
-    "letter-z (1).png",
-    size="large"
-)
 
 # Title
 st.title("🎤 Zypher Voice-to-Text Chatbot with Whisper")
@@ -72,6 +67,10 @@ def get_chatbot_response(user_input):
         st.error(f"Chatbot response generation failed: {e}")
         return None
 
+# Initialize session state for chat history
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
+
 # Record audio input
 st.info("Click below to record your voice and interact with the chatbot.")
 audio_input = st.audio_input("Record your voice")
@@ -93,14 +92,27 @@ if audio_input:
         if transcription:
             st.write(f"**Transcription:** {transcription}")
 
+            # Append user input to chat history
+            st.session_state.chat_history.append(f"You: {transcription}")
+
             # Get response from the chatbot
             st.info("Generating response from chatbot...")
             chatbot_response = get_chatbot_response(transcription)
             if chatbot_response:
                 st.write(f"**Chatbot Response:** {chatbot_response}")
+
+                # Append chatbot response to chat history
+                st.session_state.chat_history.append(f"Chatbot: {chatbot_response}")
+
             else:
                 st.error("Failed to get chatbot response.")
         else:
             st.error("Failed to transcribe audio.")
 else:
     st.warning("No valid audio input detected. Please record your voice again.")
+
+# Display chat history
+if st.session_state.chat_history:
+    st.write("### Chat History:")
+    for message in st.session_state.chat_history:
+        st.write(message)
