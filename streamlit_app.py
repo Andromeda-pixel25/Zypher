@@ -5,7 +5,7 @@ import time
 
 st.logo(
     "letter-z (1).png",
-    medium
+    "medium"
 )
 
 # Configure Streamlit page
