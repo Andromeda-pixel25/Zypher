@@ -1,5 +1,5 @@
 import streamlit as st
-from transformers import WhisperProcessor, WhisperForConditionalGeneration
+from transformers.models.whisper import WhisperProcessor, WhisperForConditionalGeneration
 from transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
 import torch
 import numpy as np
@@ -67,55 +67,32 @@ def get_chatbot_response(user_input):
         st.error(f"Chatbot response generation failed: {e}")
         return None
 
-# Initialize session state for conversation content
-if 'conversation' not in st.session_state:
-    st.session_state.conversation = []
+# Initialize chat history
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
 # Record audio input
-st.info("Click below to record your voice and interact with the chatbot.")
 audio_input = st.audio_input("Record your voice")
 
 if audio_input:
-    st.write("**Recorded Audio:**")
-    st.audio(audio_input)
+    audio_data = process_audio(audio_input.getvalue())
+    if audio_data is None:
+        st.error("Could not process the audio for transcription.")
+        st.stop()
 
-    if st.button("Transcribe & Get Response"):
-        st.info("Processing audio...")
+    transcription = transcribe_audio(audio_data)
+    if transcription:
+        # Get response from the chatbot
+        chatbot_response = get_chatbot_response(transcription)
 
-        audio_data = process_audio(audio_input.getvalue())
-        if audio_data is None:
-            st.error("Could not process the audio for transcription.")
-            st.stop()
+        # Store the chat in session state
+        st.session_state.chat_history.append({"user": transcription, "assistant": chatbot_response})
 
-        st.info("Transcribing audio...")
-        transcription = transcribe_audio(audio_data)
-        if transcription:
-            # Append user input to conversation
-            st.session_state.conversation.append({"role": "user", "content": transcription})
+# Display chat messages
+if st.session_state.chat_history:
+    for chat in st.session_state.chat_history:
+        st.chat_message("user").markdown(chat["user"])
+        st.chat_message("assistant").markdown(chat["assistant"])
 
-            # Display user input using st.chat_message
-            st.chat_message("user").markdown(transcription)
-
-            # Get response from the chatbot
-            st.info("Generating response from chatbot...")
-            chatbot_response = get_chatbot_response(transcription)
-            if chatbot_response:
-                # Append chatbot response to conversation
-                st.session_state.conversation.append({"role": "assistant", "content": chatbot_response})
-
-                # Display chatbot response using st.chat_message
-                st.chat_message("assistant").markdown(chatbot_response)
-            else:
-                st.error("Failed to get chatbot response.")
-        else:
-            st.error("Failed to transcribe audio.")
-else:
-    st.warning("No valid audio input detected. Please record your voice again.")
-
-# Display the conversation content without headers
-if st.session_state.conversation:
-    st.write("### Conversation Content:")
-    for message in st.session_state.conversation:
-        role = message["role"]
-        content = message["content"]
-        st.chat_message(role).markdown(content)
+# Record button at the bottom
+st.info("Click below to record your voice and interact with the chatbot.")
