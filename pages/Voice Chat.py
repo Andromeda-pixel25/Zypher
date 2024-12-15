@@ -1,14 +1,18 @@
 import streamlit as st
 from transformers.models.whisper import WhisperProcessor, WhisperForConditionalGeneration
 from transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
-from transformers import pipeline
 import torch
 import numpy as np
 import soundfile as sf
 import io
 
+st.logo(
+    "letter-z (1).png",
+    size="large"
+)
+
 # Title
-st.title("🎤 Voice-to-Text Chatbot with Whisper")
+st.title("🎤 Zypher Voice-to-Text Chatbot with Whisper")
 
 # Load Whisper model and processor
 @st.cache_resource
@@ -24,14 +28,8 @@ def load_chatbot_model():
     chatbot_model = BlenderbotForConditionalGeneration.from_pretrained("facebook/blenderbot-400M-distill")
     return tokenizer, chatbot_model
 
-# Load TTS model
-@st.cache_resource
-def load_tts_model():
-    return pipeline("text-to-speech", model="espnet/kan-bayashi_ljspeech_vits")
-
 whisper_processor, whisper_model = load_whisper_models()
 chatbot_tokenizer, chatbot_model = load_chatbot_model()
-tts_pipeline = load_tts_model()
 
 # Function to process audio
 def process_audio(audio_bytes):
@@ -78,9 +76,6 @@ def get_chatbot_response(user_input):
 st.info("Click below to record your voice and interact with the chatbot.")
 audio_input = st.audio_input("Record your voice")
 
-# Chat input for user text input
-user_input = st.chat_input("Type your message here...")
-
 if audio_input:
     st.write("**Recorded Audio:**")
     st.audio(audio_input)
@@ -103,26 +98,9 @@ if audio_input:
             chatbot_response = get_chatbot_response(transcription)
             if chatbot_response:
                 st.write(f"**Chatbot Response:** {chatbot_response}")
-
-                # Convert the chatbot response to speech
-                st.info("Generating speech from the response...")
-                tts_result = tts_pipeline(chatbot_response)
-                st.audio(tts_result["wav"], format="audio/wav")
             else:
                 st.error("Failed to get chatbot response.")
         else:
             st.error("Failed to transcribe audio.")
-elif user_input:
-    st.info("Generating response from text input...")
-    chatbot_response = get_chatbot_response(user_input)
-    if chatbot_response:
-        st.write(f"**Chatbot Response:** {chatbot_response}")
-
-        # Convert the chatbot response to speech
-        st.info("Generating speech from the response...")
-        tts_result = tts_pipeline(chatbot_response)
-        st.audio(tts_result["wav"], format="audio/wav")
-    else:
-        st.error("Failed to get chatbot response.")
 else:
     st.warning("No valid audio input detected. Please record your voice again.")
