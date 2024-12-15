@@ -4,8 +4,7 @@ import requests
 import time
 
 st.logo(
-    "letter-z (1).png",
-    "medium"
+    "letter-z (1).png"
 )
 
 # Configure Streamlit page
