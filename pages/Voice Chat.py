@@ -27,7 +27,7 @@ def load_chatbot_model():
 # Load TTS model
 @st.cache_resource
 def load_tts_model():
-    return pipeline("text-to-speech", model="facebook/fastspeech2-en-ljspeech")
+    return pipeline("text-to-speech", model="espnet/kan-bayashi_ljspeech_vits")
 
 whisper_processor, whisper_model = load_whisper_models()
 chatbot_tokenizer, chatbot_model = load_chatbot_model()
@@ -106,8 +106,8 @@ if audio_input:
 
                 # Convert the chatbot response to speech
                 st.info("Generating speech from the response...")
-                audio_output = tts_pipeline(chatbot_response)
-                st.audio(audio_output['audio'], format="audio/wav")
+                tts_result = tts_pipeline(chatbot_response)
+                st.audio(tts_result["wav"], format="audio/wav")
             else:
                 st.error("Failed to get chatbot response.")
         else:
@@ -120,8 +120,8 @@ elif user_input:
 
         # Convert the chatbot response to speech
         st.info("Generating speech from the response...")
-        audio_output = tts_pipeline(chatbot_response)
-        st.audio(audio_output['audio'], format="audio/wav")
+        tts_result = tts_pipeline(chatbot_response)
+        st.audio(tts_result["wav"], format="audio/wav")
     else:
         st.error("Failed to get chatbot response.")
 else:
