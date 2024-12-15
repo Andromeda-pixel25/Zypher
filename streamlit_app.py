@@ -3,6 +3,12 @@ import streamlit as st
 import requests
 import time
 
+st.logo(
+    LOGO_URL_LARGE,
+    link="letter-z (1).png",
+    icon_image=LOGO_URL_SMALL,
+)
+
 # Configure Streamlit page
 st.set_page_config(
     page_title="Zypher AI",
