@@ -14,7 +14,7 @@ st.logo(
 st.markdown("_________________________________________________________________________________")
 st.write("Powered by Whispher Ai")
 # Prompt input for the user
-prompt = st.text_input("Give a detailed description of the image to generate:")
+prompt = st.text_input("Give a detailed description of the image and click 'Generate Image' button to generate:")
 
 # Cooldown mechanism to prevent excessive requests
 if "last_request_time" not in st.session_state:
@@ -60,5 +60,4 @@ if st.button("Generate Image") and prompt:
             except requests.exceptions.RequestException as e:
                 # Handle network or request issues
                 st.error(f"An error occurred: {e}")
-else:
-    st.write("Enter a description above and click 'Generate Image' to create your artwork.")
+
