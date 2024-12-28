@@ -14,7 +14,7 @@ st.logo(
 st.markdown("_________________________________________________________________________________")
 st.write("Powered by Whispher Ai")
 # Prompt input for the user
-prompt = st.text_input("Describe the image you want to generate:")
+prompt = st.text_input("Give a detailed description of the image to generate:")
 
 # Cooldown mechanism to prevent excessive requests
 if "last_request_time" not in st.session_state:
