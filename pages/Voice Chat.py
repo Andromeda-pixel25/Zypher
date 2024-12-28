@@ -101,4 +101,4 @@ if st.session_state.chat_history:
         st.chat_message("assistant").markdown(chat["assistant"])
 
 # Record button at the bottom
-st.info("Click below to record your voice and interact with the chatbot.")
+st.info("Click mic button above to record your voice and interact with the chatbot.")
