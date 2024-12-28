@@ -1,71 +1,49 @@
-# Zypher AI: Multipage App with Sidebar
 import streamlit as st
-import requests
-import time
+import os
+import google.generativeai as genai
 
-st.logo(
-    "letter-z (1).png",
-    size="large"
-)
+genai.configure(api_key="AIzaSyA7V6N800cWrvaW2hlgHazi62i4Gh-idZk")
+model = genai.GenerativeModel('gemini-pro')
 
-# Configure Streamlit page
-st.set_page_config(
-    page_title="Zypher AI",
-    page_icon="letter-z (1).png",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+messages = model.start_chat()
 
-st.title("📝 Zypher Text Response")
-st.markdown("_________________________________________________________________________________")
-st.write("Powered by Whispher Ai")
+st.title("ZypherAi")
+st.write("____________________________________________________________________________________________")
+st.markdown("Powered by Google Generative AI for Seamless Conversations")
+image="https://github.com/Andromeda-pixel25/smartbot-using-python/blob/main/letter-z%20(1).png?raw=true"
+st.logo(image,size="large")
 
+def role_to_streamlit(role):
+    if role == "model":
+        return "assistant"
+    else:
+        return role
+        
+if "messages" not in st.session_state:
+    st.session_state.messages = model.start_chat(history = [])
+    
+for message in st.session_state.messages.history:
+    role = role_to_streamlit(getattr(message, "role"))
+    text = ""
+    parts = getattr(message, "parts", None) #none is specified to run even if nothing exists
+    
+    if parts:
+        for part in parts:
+            if hasattr(part, "text"): # Check if `text` attribute exists
+                text = part.text
+                break
+            
+# display the history
+    with st.chat_message(role):
+        st.markdown(text)
 
-# Initialize session state for chat history
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-
-# Text input using st.chat_input
-prompt = st.chat_input("Ask Zypher AI anything:")
-
-model_url = "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill"
-
+#input
+prompt=st.chat_input("ask away..")
 if prompt:
-    # Add the user's input to chat history
-    st.session_state.chat_history.append({"role": "user", "content": prompt})
-
-    with st.spinner("Thinking..."):
-        try:
-            while True:  # Retry loop
-                response = requests.post(
-                    model_url,
-                    headers={"Authorization": f"Bearer {st.secrets['HUGGINGFACE_API_TOKEN']}"},
-                    json={"inputs": prompt},
-                    timeout=60  # Timeout to handle delays
-                )
-
-                if response.status_code == 200:
-                    # Successful response
-                    result = response.json()
-                    output = result["generated_text"] if isinstance(result, dict) else result[0].get("generated_text", "No response text found.")
-                    st.session_state.chat_history.append({"role": "assistant", "content": output})
-                    break
-                elif response.status_code == 503:
-                    # Model is loading; retry after estimated time
-                    error_data = response.json()
-                    wait_time = error_data.get("estimated_time", 10)  # Default to 10 seconds if not provided
-                    st.warning(f"The model is loading. Retrying in {int(wait_time)} seconds...")
-                    time.sleep(wait_time)
-                else:
-                    st.error(f"Failed to fetch response. Error {response.status_code}: {response.text}")
-                    break
-        except requests.exceptions.RequestException as e:
-            st.error(f"An error occurred: {e}")
-
-# Display the chat history
-for message in st.session_state.chat_history:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+    st.chat_message("user").markdown(prompt)
+    response = st.session_state.messages.send_message(prompt)
+    with st.chat_message("assistant"):
+        st.markdown(response.text)
 
 
 
